@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Listening</title>
+    <style>
+        body {
+            font-family: 'Questrial', monospace; 
+            margin: 20px;
+            background-color: #d29858; 
+            color: #fffbf2; 
+        }
+        h1 {
+            font-family: 'Lobster', monospace;
+            font-size: 6rem;
+            color: #efd5b8;
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 1px;
+            text-shadow: 7px 7px 0.1px #7f586d;
+            letter-spacing: 5px; 
+        }
+        .section {
+            margin-bottom: 30px;
+            background-color: #a15548;
+            border: 3px solid #efd5b8;
+            border-radius: 25px; /* Bo góc */
+            padding: 20px; /* Padding cho các phần */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Đổ bóng nhẹ */
+        }
+        .box {
+            font-family: 'Questrial', monospace;
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+    	    box-sizing: border-box; /* Điều chỉnh kích thước của box để bao gồm cả padding và border */
+            font-size: 1rem;
+            border: 3px solid #729da4; 
+            border-radius: 5px; /* Bo góc */
+            background-color: #efd5b8; 
+            color: #7f586d;
+        }
+        button {
+            font-family: 'Questrial', monospace;
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: #729da4; 
+            color: #fffbf2; 
+            border: none;
+            border-radius: 15px; 
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #7f586d; /* Màu tối hơn khi hover */
+        }
+        .error {
+            color: #d29858;
+	    font-weight: bold; /* In đậm */
+	    font-style: italic; /* In nghiêng */
+
+        }
+        .success {
+            color: #729da4;
+	    font-weight: bold; /* In đậm */
+	    font-style: italic; /* In nghiêng */
+
+        }
+        table {
+            font-family: 'Questrial', monospace;
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            font-family: 'Questrial', monospace;
+
+            border: 2px solid #729da4; 
+        }
+        td {
+            font-family: 'Questrial', monospace;
+            background-color: #efd5b8;
+            color: #7f586d;
+        }
+        th, td {
+            font-family: 'Questrial', monospace;
+            padding: 5px;
+            text-align: center;
+        }
+        th {
+            font-family: 'Questrial', monospace;
+            background-color: #7f586d; 
+            color: #fffbf2;
+        }
+             /* Thêm CSS cho thanh kéo tốc độ và giá trị */
+        .rate-container {
+            margin-bottom: 10px;
+        }
+
+        #rateValue {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 5px;
+            text-align: left; /* Căn trái */
+        }
+
+/* Thay đổi CSS cho thanh kéo */
+input[type="range"] {
+    -webkit-appearance: none; /* Xóa bỏ kiểu mặc định của trình duyệt */
+    width: 100%;
+    height: 30px; /* Chiều cao của thanh */
+    background: #efd5b8; /* Màu nền của phần chưa chọn */
+    outline: none;
+    opacity: 0.8;
+    transition: opacity .15s ease-in-out;
+    border-radius: 10px; /* Bo góc cho thanh kéo */
+}
+
+/* Kích thước và màu của nút kéo */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Xóa bỏ kiểu mặc định của trình duyệt */
+    appearance: none;
+    width: 20px; /* Kích thước nút kéo */
+    height: 20px; /* Chiều cao nút kéo */
+    background: #7f586d; /* Màu của nút kéo */
+    cursor: pointer;
+    border-radius: 50%; /* Bo tròn nút kéo */
+    margin-top: -5px; /* Đẩy nút kéo lên giữa thanh chạy */
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #7f586d; /* Màu của nút kéo */
+    cursor: pointer;
+    border-radius: 50%; /* Bo tròn nút kéo */
+}
+/* Màu nền của phần đã chọn */
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 10px; /* Chiều cao của thanh */
+    background: linear-gradient(to right, #7f586d var(--value), #bea2b1 var(--value)); /* Tô màu phần đã chọn */
+    border-radius: 10px; /* Bo góc cho thanh kéo */
+}
+
+/* Màu nền của phần chưa chọn (Firefox) */
+input[type="range"]::-moz-range-track {
+    background: #d29858; /* Màu nền của phần chưa chọn */
+}
+
+/* Màu nền của phần đã chọn (Firefox) */
+input[type="range"]::-moz-range-track {
+    height: 8px; /* Chiều cao của thanh */
+    background: linear-gradient(to right, #7f586d var(--value), #bea2b1 var(--value)); /* Tô màu phần đã chọn */
+    border-radius: 10px; /* Bo góc cho thanh kéo */
+}
+
+input[type="range"]:focus {
+    outline: none; /* Loại bỏ viền khi tập trung */
+}
+
+
+
+
+            
+    </style>
+</head>
+<body>
+    <h1>Listening</h1>
+
+    <div class="section">
+        <label>Chọn Ngôn Ngữ:</label>
+        <select id="languageSelect" class="box">
+            <option value="de">Tiếng Đức</option>
+            <option value="en">Tiếng Anh</option>
+        </select>
+
+        <label>Chọn Giọng Đọc:</label>
+        <select id="voiceSelect" class="box">
+            <!-- Các giọng đọc sẽ được thêm vào đây -->
+        </select>
+
+  	  <!-- Đặt nút tải giọng đọc ngay dưới phần chọn giọng đọc -->
+    	<button id="loadVoicesButton" onclick="loadVoices()">Tải Giọng Đọc</button>
+
+	<br>
+	<br>
+    <label>Chọn Tốc Độ Đọc:</label>
+    <div class="rate-container">
+        <span id="rateValue">x1.0</span> <!-- Hiển thị giá trị hiện tại của thanh kéo -->
+        <input type="range" id="rateSelect" class="box" min="0.5" max="2" step="0.1" value="1" onchange="updateRateValue()" oninput="updateRateValue()">
+    </div>
+     
+    
+    
+    
+
+        <label>Nhập Đoạn Hội Thoại:</label>
+        <textarea id="inputText" class="box" rows="4" placeholder="Nhập đoạn hội thoại ở đây..."></textarea>
+        <button id="playButton" onclick="playText()">Nghe Đoạn Văn</button>
+        <button id="continueButton" style="display: none;" onclick="playNextSentence()">Nghe Tiếp</button>
+        <button id="repeatButton" style="display: none;" onclick="repeatText()">Nghe Toàn Bộ</button>
+        <button id="replaySentenceButton" style="display: none;" onclick="replaySentence()">Nghe Lại Câu</button>
+
+        <p>Số Lần Nghe: <span id="listenCount">0</span></p>
+        <label>Nhập Lại Đoạn Nghe:</label>
+        <textarea id="repeatText" class="box" rows="4" placeholder="Nhập lại đoạn bạn đã nghe..."></textarea>
+        <p class="error" id="errorMessage"></p>
+
+        <div class="section">
+            <button id="evaluateButton" onclick="evaluateAndSave()">Đánh Giá</button>
+            <p id="resultMessage"></p>
+        </div>
+
+    </div>
+
+    <div class="section">
+        <h2>Lịch Sử Luyện Tập (10 lần gần nhất)</h2>
+        <table id="historyTable">
+            <thead>
+    		<tr>
+        		<th>STT</th>
+        		<th>Đoạn Văn</th>
+        		<th>Đoạn Nghe Lại</th>
+        		<th>Điểm Số (%)</th>
+        		<th>Số Từ Sai</th>
+        		<th>Từ Sai</th> <!-- Thêm cột cho "Từ sai" -->
+        		<th>Số Lần Nghe</th>
+    		</tr>
+	    </thead>
+
+            <tbody id="historyTableBody">
+                <!-- Lịch sử sẽ được thêm vào đây -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let listenCount = 0;
+        let voices = [];
+        let textToPlay = [];
+        let currentSentenceIndex = 0;
+        let selectedLanguage = 'de';  // Mặc định là tiếng Đức
+        let historyData = [];
+        let lastInputText = ''; // Lưu lại đoạn văn nhập cuối cùng
+
+	let currentRate = parseFloat(document.getElementById("rateSelect").value);
+
+	// Lắng nghe sự kiện thay đổi của mục chọn tốc độ
+	document.getElementById("rateSelect").addEventListener("change", function() {
+	    currentRate = parseFloat(this.value);
+	});
+
+
+    function loadVoices() {
+    // Kiểm tra nếu đã có giọng đọc
+    if (speechSynthesis.getVoices().length !== 0) {
+        populateVoiceList();
+    } else {
+        // Đợi sự kiện 'onvoiceschanged' để giọng đọc được tải
+        speechSynthesis.onvoiceschanged = function() {
+            populateVoiceList();
+        };
+    }
+}
+
+function populateVoiceList() {
+    voices = speechSynthesis.getVoices();
+    const voiceSelect = document.getElementById("voiceSelect");
+    voiceSelect.innerHTML = '';
+
+    // Hiển thị các giọng Google lên đầu
+    const googleVoices = voices.filter(voice => voice.name.includes("Google"));
+    const otherVoices = voices.filter(voice => !voice.name.includes("Google"));
+
+    googleVoices.forEach((voice) => {
+        const option = document.createElement('option');
+        option.value = voice.name;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        voiceSelect.appendChild(option);
+    });
+
+    otherVoices.forEach((voice) => {
+        const option = document.createElement('option');
+        option.value = voice.name;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        voiceSelect.appendChild(option);
+    });
+
+    document.getElementById("errorMessage").innerText = "Giọng đọc đã được tải thành công.";
+}
+
+// Nút tải giọng đọc khi người dùng tương tác
+document.getElementById('loadVoicesButton').addEventListener('click', loadVoices);
+
+loadVoices();
+
+
+
+function checkSpeechSynthesisSupport() {
+    if ('speechSynthesis' in window) {
+        console.log("Speech Synthesis is supported");
+    } else {
+        console.error("Speech Synthesis is not supported in this browser");
+        document.getElementById("errorMessage").innerText = "Trình duyệt này không hỗ trợ giọng đọc.";
+    }
+}
+
+checkSpeechSynthesisSupport();
+
+
+        function splitText(text) {
+    	// Thêm dấu phẩy, dấu chấm phẩy,vào biểu thức chính quy
+            return text.split(/(?<=[,.!?"])\s+/);
+        }
+
+        window.onload = function() {
+    const rangeInput = document.getElementById("rateSelect");
+    const initialRate = parseFloat(rangeInput.value);
+    const percentage = (initialRate - rangeInput.min) / (rangeInput.max - rangeInput.min) * 100;
+    rangeInput.style.setProperty('--value', percentage + '%'); // Cập nhật giá trị cho màu sắc
+    updateRateValue(); // Cập nhật giá trị hiển thị
+};
+
+
+// Hàm để cập nhật giá trị hiển thị của thanh kéo
+function updateRateValue() {
+    const rate = document.getElementById("rateSelect").value;
+    document.getElementById("rateValue").innerText = `x${rate}`; // Thêm tiền tố x vào giá trị
+    currentRate = parseFloat(rate); // Cập nhật tốc độ hiện tại
+
+    // Cập nhật giá trị cho thanh kéo
+    const rangeInput = document.getElementById("rateSelect");
+    const percentage = (rate - rangeInput.min) / (rangeInput.max - rangeInput.min) * 100;
+    rangeInput.style.setProperty('--value', percentage + '%'); // Cập nhật giá trị cho màu sắc
+}
+
+
+function playText() {
+    const text = document.getElementById("inputText").value.trim();
+    if (text) {
+        selectedLanguage = document.getElementById("languageSelect").value; // Cập nhật ngôn ngữ đã chọn
+        textToPlay = splitText(text);
+        listenCount = 1;
+        document.getElementById("listenCount").innerText = listenCount;
+        currentSentenceIndex = 0;
+        lastInputText = text; // Lưu đoạn văn nhập
+        document.getElementById("inputText").style.display = 'none';
+        document.getElementById("playButton").style.display = 'none'; // Ẩn nút Nghe đoạn văn
+        document.getElementById("continueButton").style.display = 'inline-block';
+        document.getElementById("repeatButton").style.display = 'inline-block';
+        document.getElementById("replaySentenceButton").style.display = 'inline-block';
+
+        playNextSentence();
+    } else {
+        document.getElementById("errorMessage").innerText = "Vui lòng nhập đoạn văn bản.";
+    }
+}
+
+function playNextSentence() {
+    if (currentSentenceIndex < textToPlay.length) {
+        const textChunk = textToPlay[currentSentenceIndex];
+        const utterance = new SpeechSynthesisUtterance(textChunk);
+        utterance.lang = selectedLanguage === 'de' ? 'de-DE' : 'en-US';
+
+        const selectedVoice = document.getElementById("voiceSelect").value;
+        const voice = voices.find(voice => voice.name === selectedVoice);
+        if (voice) {
+            utterance.voice = voice; // Thiết lập giọng đọc
+        } else {
+            console.error("Giọng đọc không tồn tại cho:", selectedLanguage);
+            document.getElementById("errorMessage").innerText = "Giọng đọc không khả dụng cho ngôn ngữ đã chọn.";
+            return;
+        }
+
+        // Áp dụng tốc độ đã cập nhật
+        utterance.rate = currentRate;
+
+        speechSynthesis.speak(utterance);
+        currentSentenceIndex++;
+    } else {
+        document.getElementById("continueButton").style.display = 'none';
+    }
+}
+
+
+
+function repeatText() {
+    const text = document.getElementById("inputText").value.trim();
+    textToPlay = splitText(text); // Tách văn bản thành các câu
+    currentSentenceIndex = 0; // Đặt chỉ số câu về 0
+
+    function playNextWithDelay() {
+        if (currentSentenceIndex < textToPlay.length) {
+            const utterance = new SpeechSynthesisUtterance(textToPlay[currentSentenceIndex]);
+            utterance.lang = selectedLanguage === 'de' ? 'de-DE' : 'en-US';
+
+            const selectedVoice = document.getElementById("voiceSelect").value;
+            const voice = voices.find(voice => voice.name === selectedVoice);
+            if (voice) {
+                utterance.voice = voice; // Thiết lập giọng đọc
+            } else {
+                console.error("Giọng đọc không tồn tại:", selectedVoice);
+                document.getElementById("errorMessage").innerText = "Giọng đọc không tồn tại.";
+                return;
+            }
+
+            // Áp dụng tốc độ đã cập nhật
+            utterance.rate = currentRate;
+
+            // Sau khi phát xong câu hiện tại, tiếp tục phát câu tiếp theo với độ trễ 2 giây
+            utterance.onend = function() {
+                currentSentenceIndex++;
+                setTimeout(playNextWithDelay, 2000); // Nghỉ 2 giây trước khi phát câu tiếp theo
+            };
+
+            speechSynthesis.speak(utterance);
+        } else {
+            // Khi toàn bộ đoạn văn đã được phát xong, tăng số lần nghe
+            listenCount++;
+            document.getElementById("listenCount").innerText = listenCount;
+            currentSentenceIndex = 0; // Đặt lại chỉ số
+        }
+    }
+
+    playNextWithDelay();
+}
+
+
+
+
+
+
+function replaySentence() {
+    if (currentSentenceIndex > 0) {
+        // Phát lại câu vừa mới nghe (tức là câu trước đó)
+        const lastSentence = textToPlay[currentSentenceIndex - 1];
+        const utterance = new SpeechSynthesisUtterance(lastSentence);
+        utterance.lang = selectedLanguage === 'de' ? 'de-DE' : 'en-US';
+
+        const selectedVoice = document.getElementById("voiceSelect").value;
+        const voice = voices.find(voice => voice.name === selectedVoice);
+        
+        if (voice) {
+            utterance.voice = voice; // Thiết lập giọng đọc
+        } else {
+            console.warn("Giọng đọc không tồn tại cho:", selectedVoice);
+            document.getElementById("errorMessage").innerText = "Giọng đọc không tồn tại.";
+            return;
+        }
+
+        // Áp dụng tốc độ đã cập nhật
+        utterance.rate = currentRate;
+
+        speechSynthesis.speak(utterance);
+        listenCount++; // Tăng số lần nghe
+        document.getElementById("listenCount").innerText = listenCount;
+    }
+}
+
+
+
+
+function evaluateAndSave() {
+    const repeatText = document.getElementById("repeatText").value.trim();
+    const text = lastInputText; // Sử dụng đoạn văn đã lưu
+    let errors = 0;
+    let wrongWords = []; // Mảng lưu các từ sai
+
+    // Tách đoạn văn thành các từ
+    const inputWords = text.match(/[\w'äöüß]+/g) || []; // Từ gốc
+    const userWords = repeatText.match(/[\w'äöüß]+/g) || []; // Từ người dùng
+
+    let userIndex = 0; // Chỉ số cho từ người dùng
+
+    // Duyệt qua từng từ trong văn bản gốc
+    for (let i = 0; i < inputWords.length; i++) {
+        const expectedWord = inputWords[i].toLowerCase(); // Từ trong văn bản
+        // So sánh với từ người dùng nếu còn từ để so sánh
+        if (userIndex < userWords.length) {
+            const userWord = userWords[userIndex].toLowerCase(); // Từ người dùng
+            // Kiểm tra nếu từ không khớp
+            if (userWord !== expectedWord) {
+                errors++;
+                wrongWords.push(expectedWord); // Lưu từ sai (expectedWord) vào mảng
+                // Không tăng chỉ số userIndex nếu từ không khớp
+            } else {
+                userIndex++; // Tăng chỉ số nếu từ khớp
+            }
+        } else {
+            // Nếu không còn từ nào trong userWords, tăng số lỗi
+            errors++;
+        }
+    }
+
+    // Tính điểm số
+    const score = ((inputWords.length - errors) / inputWords.length) * 100;
+    const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${inputWords.length}`;
+    document.getElementById("resultMessage").innerText = resultMessage;
+
+    // Lưu lịch sử
+    if (historyData.length >= 10) {
+        historyData.shift(); // Xóa dòng đầu tiên nếu đã có 10 dòng
+    }
+    historyData.push({ text, repeatText, score: score.toFixed(2), errors, listenCount, wrongWords: wrongWords.join(', ') }); // Lưu từ sai
+    updateHistoryTable();
+    resetForm();
+}
+
+
+
+        function resetForm() {
+            document.getElementById("inputText").value = '';
+            document.getElementById("repeatText").value = '';
+            document.getElementById("errorMessage").innerText = '';
+            document.getElementById("inputText").style.display = 'block';
+            document.getElementById("playButton").style.display = 'inline-block'; // Hiện nút Nghe đoạn văn
+            document.getElementById("continueButton").style.display = 'none';
+            document.getElementById("repeatButton").style.display = 'none';
+            document.getElementById("replaySentenceButton").style.display = 'none';
+            listenCount = 0;
+            document.getElementById("listenCount").innerText = listenCount;
+        }
+
+        function updateHistoryTable() {
+    		const historyTableBody = document.getElementById("historyTableBody");
+    		historyTableBody.innerHTML = ''; // Xóa nội dung trước đó
+    		historyData.forEach((entry, index) => {
+        		const row = document.createElement('tr');
+        		row.innerHTML = `
+            			<td>${index + 1}</td>
+            			<td>${entry.text}</td>
+            			<td>${entry.repeatText}</td>
+            			<td>${entry.score}</td>
+            			<td>${entry.errors}</td>
+            			<td class="wrong-word">${entry.wrongWords}</td> <!-- Hiển thị từ sai ở đây -->
+            			<td>${entry.listenCount}</td>
+        		`;
+        		historyTableBody.appendChild(row);
+    		});
+	}
+
+    </script>
+</body>
+</html>
