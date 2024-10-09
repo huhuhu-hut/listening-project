@@ -271,17 +271,57 @@ function populateVoiceList() {
     const voiceSelect = document.getElementById("voiceSelect");
     voiceSelect.innerHTML = '';
 
-    // Hiển thị các giọng Google lên đầu
-    const googleVoices = voices.filter(voice => voice.name.includes("Google"));
-    const otherVoices = voices.filter(voice => !voice.name.includes("Google"));
+ // Lọc giọng đọc tiếng Đức và tiếng Anh
+ const germanVoices = voices.filter(voice => voice.lang.startsWith('de'));
+    const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
 
-    googleVoices.forEach((voice) => {
+    // Lọc giọng đọc khác không phải tiếng Đức và tiếng Anh
+    const otherVoices = voices.filter(voice => !voice.lang.startsWith('de') && !voice.lang.startsWith('en'));
+
+            // Thêm dòng phân tách giữa giọng Đức và giọng khác
+            const germanSeparator = document.createElement('option');
+    germanSeparator.disabled = true; // Không cho phép chọn
+    germanSeparator.textContent = "---------- Giọng đọc tiếng Đức ----------"; // Dòng phân tách
+    germanSeparator.style.fontStyle = 'italic';
+    germanSeparator.style.color = '#a15548';
+    germanSeparator.style.fontSize = '0.9em';
+    voiceSelect.appendChild(germanSeparator);    
+
+    // Thêm giọng đọc tiếng Đức vào danh sách chọn
+    germanVoices.forEach((voice) => {
         const option = document.createElement('option');
         option.value = voice.name;
         option.textContent = `${voice.name} (${voice.lang})`;
         voiceSelect.appendChild(option);
     });
 
+    // Thêm dòng phân tách giữa giọng Anh và giọng khác
+    const englishSeparator = document.createElement('option');
+    englishSeparator.disabled = true; // Không cho phép chọn
+    englishSeparator.textContent = "---------- Giọng đọc tiếng Anh ----------"; // Dòng phân tách
+    englishSeparator.style.fontStyle = 'italic';
+    englishSeparator.style.color = '#a15548';
+    englishSeparator.style.fontSize = '0.9em';
+    voiceSelect.appendChild(englishSeparator);
+
+    // Thêm giọng đọc tiếng Anh vào danh sách chọn
+    englishVoices.forEach((voice) => {
+        const option = document.createElement('option');
+        option.value = voice.name;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        voiceSelect.appendChild(option);
+    });
+
+        // Thêm dòng phân tách cuối cùng cho giọng khác
+        const otherSeparator = document.createElement('option');
+    otherSeparator.disabled = true; // Không cho phép chọn
+    otherSeparator.textContent = "---------- Giọng đọc khác ----------"; // Dòng phân tách
+    otherSeparator.style.fontStyle = 'italic';
+    otherSeparator.style.color = '#a15548';
+    otherSeparator.style.fontSize = '0.9em';
+    voiceSelect.appendChild(otherSeparator);
+
+    // Thêm giọng đọc khác vào danh sách chọn
     otherVoices.forEach((voice) => {
         const option = document.createElement('option');
         option.value = voice.name;
@@ -289,8 +329,14 @@ function populateVoiceList() {
         voiceSelect.appendChild(option);
     });
 
-    document.getElementById("errorMessage").innerText = "Giọng đọc đã được tải thành công.";
+    // Thông báo trạng thái tải giọng đọc
+    if (voices.length > 0) {
+        document.getElementById("errorMessage").innerText = "Giọng đọc đã được tải thành công.";
+    } else {
+        document.getElementById("errorMessage").innerText = "Không có giọng đọc cho ngôn ngữ này.";
+    }
 }
+
 
 // Nút tải giọng đọc khi người dùng tương tác
 document.getElementById('loadVoicesButton').addEventListener('click', loadVoices);
