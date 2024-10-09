@@ -217,7 +217,8 @@ input[type="range"]:focus {
     </div>
 
     <div class="section">
-        <h2>Lịch Sử Luyện Tập (10 lần gần nhất)</h2>
+        <button id="exportButton">Xuất Dữ Liệu Lịch Sử</button> <!-- Nút xuất dữ liệu -->
+        <h2>Lịch Sử Luyện Tập (20 lần gần nhất)</h2>
         <table id="historyTable">
             <thead>
     		<tr>
@@ -227,6 +228,8 @@ input[type="range"]:focus {
         		<th>Điểm Số (%)</th>
         		<th>Số Từ Sai</th>
         		<th>Từ Sai</th> <!-- Thêm cột cho "Từ sai" -->
+                <th>Từ Đúng</th> <!-- Thêm cột từ đúng -->
+                <th>Lý Do</th> <!-- Thêm cột lý do -->
         		<th>Số Lần Nghe</th>
     		</tr>
 	    </thead>
@@ -511,51 +514,112 @@ function replaySentence() {
 
 function evaluateAndSave() {
     const repeatText = document.getElementById("repeatText").value.trim();
-    const text = lastInputText; // Sử dụng đoạn văn đã lưu
+    const text = lastInputText.trim(); // Đoạn văn gốc đã nhập
     let errors = 0;
-    let wrongWords = []; // Mảng lưu các từ sai
+    let wrongWords = []; // Mảng lưu trữ các từ sai
+    let correctWords = []; // Mảng lưu trữ các từ đúng (từ gốc cần sửa)
+    let reasons = []; // Mảng lưu trữ lý do cho các từ sai
 
-    // Tách đoạn văn thành các từ
-    const inputWords = text.match(/[\w'äöüß]+/g) || []; // Từ gốc
-    const userWords = repeatText.match(/[\w'äöüß]+/g) || []; // Từ người dùng
+    // Tách đoạn văn thành từng từ
+    const inputWords = text.match(/\S+/g) || []; // Từ gốc
+    const userWords = repeatText.match(/\S+/g) || []; // Từ người dùng nhập
 
-    let userIndex = 0; // Chỉ số cho từ người dùng
+    let inputIndex = 0;
+    let userIndex = 0;
 
-    // Duyệt qua từng từ trong văn bản gốc
-    for (let i = 0; i < inputWords.length; i++) {
-        const expectedWord = inputWords[i].toLowerCase(); // Từ trong văn bản
-        // So sánh với từ người dùng nếu còn từ để so sánh
-        if (userIndex < userWords.length) {
-            const userWord = userWords[userIndex].toLowerCase(); // Từ người dùng
-            // Kiểm tra nếu từ không khớp
-            if (userWord !== expectedWord) {
-                errors++;
-                wrongWords.push(expectedWord); // Lưu từ sai (expectedWord) vào mảng
-                // Không tăng chỉ số userIndex nếu từ không khớp
-            } else {
-                userIndex++; // Tăng chỉ số nếu từ khớp
-            }
+    while (inputIndex < inputWords.length || userIndex < userWords.length) {
+        const expectedWord = inputWords[inputIndex]; // Từ gốc
+        const userWord = userWords[userIndex]?.toLowerCase(); // Chỉ chuyển đổi từ người dùng
+
+        if (userWord === expectedWord.toLowerCase()) { // So sánh từ gốc với từ người dùng
+            // Nếu từ khớp, tiếp tục so sánh từ tiếp theo
+            inputIndex++;
+            userIndex++;
         } else {
-            // Nếu không còn từ nào trong userWords, tăng số lỗi
-            errors++;
+            // Từ không khớp, ta kiểm tra tiếp các từ để phát hiện từ thiếu hoặc thừa
+            let nextExpectedWord = inputWords[inputIndex + 1]; // Không chuyển đổi
+            let nextUserWord = userWords[userIndex + 1]?.toLowerCase(); // Chỉ chuyển đổi từ người dùng
+
+            if (userWord === nextExpectedWord.toLowerCase()) {
+                // Nếu từ người dùng khớp với từ gốc tiếp theo, nghĩa là người dùng đã bỏ qua một từ gốc
+                wrongWords.push(expectedWord); // Đánh dấu từ gốc bị thiếu
+                correctWords.push(expectedWord); // Ghi lại từ đúng cần sửa
+                reasons.push("Thiếu từ"); // Lý do
+                inputIndex++; // Chỉ tăng inputIndex để kiểm tra tiếp từ người dùng với từ gốc sau
+            } else if (nextUserWord === expectedWord.toLowerCase()) {
+                // Nếu từ tiếp theo của người dùng khớp với từ gốc hiện tại, nghĩa là người dùng nhập thêm từ
+                wrongWords.push(userWord); // Đánh dấu từ thừa của người dùng
+                correctWords.push(expectedWord); // Ghi lại từ đúng cần sửa
+                reasons.push("Thừa từ"); // Lý do
+                userIndex++; // Chỉ tăng userIndex để kiểm tra tiếp từ người dùng
+            } else {
+                // Nếu không khớp, cả hai từ đều sai
+                wrongWords.push(userWord); // Đánh dấu từ sai của người dùng
+                correctWords.push(expectedWord); // Ghi lại từ đúng cần sửa
+                reasons.push("Sai chính tả"); // Lý do
+                inputIndex++;
+                userIndex++;
+            }
+            errors++; // Tăng số lượng từ sai
         }
     }
 
-    // Tính điểm số
-    const score = ((inputWords.length - errors) / inputWords.length) * 100;
+    
+
+ // Tính điểm và hiển thị
+ const score = ((inputWords.length - errors) / inputWords.length) * 100;
     const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${inputWords.length}`;
     document.getElementById("resultMessage").innerText = resultMessage;
 
+
+
     // Lưu lịch sử
-    if (historyData.length >= 10) {
+    if (historyData.length >= 20) {
         historyData.shift(); // Xóa dòng đầu tiên nếu đã có 10 dòng
     }
-    historyData.push({ text, repeatText, score: score.toFixed(2), errors, listenCount, wrongWords: wrongWords.join(', ') }); // Lưu từ sai
-    updateHistoryTable();
+        // Lưu dữ liệu lịch sử (bao gồm từ sai)
+        historyData.push({ text, repeatText, score: score.toFixed(2), errors, listenCount, wrongWords: wrongWords.join(', '), correctWords: correctWords.join(', '), reasons: reasons.join(', ') });
+        updateHistoryTable();
     resetForm();
 }
 
+// Hàm xuất dữ liệu từ bảng vào tệp CSV
+function exportData() {
+    // Lấy ngày giờ hiện tại
+    const now = new Date();
+    const formattedDate = now.toLocaleString(); // Định dạng ngày giờ theo múi giờ hiện tại
 
+    // Định nghĩa tiêu đề cột
+    const headers = "STT, Đoạn Văn, Đoạn Nghe Lại, Điểm Số, Số Từ Sai, Từ Sai, Từ Đúng, Lý Do, Số Lần Nghe, Ngày Xuất";
+
+    // Lấy dữ liệu từ các ô td
+    const rows = Array.from(document.querySelectorAll('#historyTable tbody tr'))
+        .map((row, index) => 
+            Array.from(row.querySelectorAll('td')) // Lấy tất cả các ô td trong hàng
+            .map(td => `"${td.innerText.replace(/"/g, '""')}"`) // Thay thế dấu phẩy bằng khoảng trắng
+                .concat(formattedDate) // Thêm giá trị ngày giờ vào cuối hàng
+                .join(",") // Kết hợp các giá trị trong hàng thành chuỗi, sử dụng dấu phẩy
+        ).join("\n"); // Kết hợp tất cả các hàng thành chuỗi
+
+    // Tạo nội dung CSV
+    const csvContent = "data:text/csv;charset=utf-8," 
+        + headers + "\n" + // Thêm tiêu đề cột vào đầu nội dung CSV
+        rows; // Thêm dữ liệu từ bảng vào CSV
+
+    // Tạo URI và liên kết tải xuống
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "history_data.csv"); // Tên tệp sẽ tải xuống
+    document.body.appendChild(link); // Cần thêm vào DOM để kích hoạt tải xuống
+    link.click(); // Kích hoạt tải xuống
+    document.body.removeChild(link); // Xóa liên kết sau khi tải xuống
+}
+
+
+
+// Gán sự kiện cho nút xuất dữ liệu
+document.getElementById('exportButton').addEventListener('click', exportData);
 
         function resetForm() {
             document.getElementById("inputText").value = '';
@@ -571,22 +635,25 @@ function evaluateAndSave() {
         }
 
         function updateHistoryTable() {
-    		const historyTableBody = document.getElementById("historyTableBody");
-    		historyTableBody.innerHTML = ''; // Xóa nội dung trước đó
-    		historyData.forEach((entry, index) => {
-        		const row = document.createElement('tr');
-        		row.innerHTML = `
-            			<td>${index + 1}</td>
-            			<td>${entry.text}</td>
-            			<td>${entry.repeatText}</td>
-            			<td>${entry.score}</td>
-            			<td>${entry.errors}</td>
-            			<td class="wrong-word">${entry.wrongWords}</td> <!-- Hiển thị từ sai ở đây -->
-            			<td>${entry.listenCount}</td>
-        		`;
-        		historyTableBody.appendChild(row);
-    		});
-	}
+    const historyTableBody = document.getElementById("historyTableBody");
+    historyTableBody.innerHTML = ''; // Xóa nội dung trước đó
+
+    historyData.forEach((entry, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${entry.text}</td>
+            <td>${entry.repeatText}</td>
+            <td>${entry.score}</td>
+            <td>${entry.errors}</td>
+            <td>${entry.wrongWords}</td> <!-- Hiển thị từ sai -->
+            <td>${entry.correctWords}</td> <!-- Hiển thị từ đúng -->
+            <td>${entry.reasons}</td> <!-- Hiển thị lý do -->
+            <td>${entry.listenCount}</td>
+        `;
+        historyTableBody.appendChild(row);
+    });
+}
 
     </script>
 </body>
