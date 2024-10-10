@@ -67,22 +67,45 @@
         }
         button {
             font-family: 'Questrial', monospace;
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 1rem;
+            margin-top: 14px;
+            padding: 6px 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
             background-color: #729da4; 
             color: #fffbf2; 
-            border: none;
+            border: 3px solid #d29858; 
             border-radius: 15px; 
             cursor: pointer;
         }
         button:hover {
             background-color: #7f586d; /* Màu tối hơn khi hover */
+            font-weight: bold;
         }
+
+        .btn-evaluate {
+            font-family: 'Questrial', monospace;
+            margin-top: 10px;
+            padding: 6px 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            background-color: #7f586d; 
+            color: #fffbf2; 
+            border: 3px solid #d29858; 
+            border-radius: 15px; 
+            cursor: pointer;
+    }
+    
+    .btn-evaluate:hover {
+        font-weight: bold;
+        background-color: #bea2b1; /* Màu tối hơn khi hover */
+        color: #fffbf2; 
+    }
+
         .error {
             color: #d29858;
 	    font-weight: bold; /* In đậm */
 	    font-style: italic; /* In nghiêng */
+        margin-top: 10px;
         }
         
         .highlight-wrong {
@@ -203,14 +226,15 @@ input[type="range"]:focus {
             <option value="de">Tiếng Đức</option>
             <option value="en">Tiếng Anh</option>
         </select>
-
+    <br>
+    <br>
         <label>Chọn Giọng Đọc:</label>
         <select id="voiceSelect" class="box">
             <!-- Các giọng đọc sẽ được thêm vào đây -->
         </select>
 
   	  <!-- Đặt nút tải giọng đọc ngay dưới phần chọn giọng đọc -->
-    	<button id="loadVoicesButton" onclick="loadVoices()">Tải Giọng Đọc</button>
+    	<button id="loadVoicesButton" onclick="loadVoices()">TẢI GIỌNG ĐỌC</button>
 
 	<br>
 	<br>
@@ -226,25 +250,31 @@ input[type="range"]:focus {
 
         <label>Nhập Đoạn Hội Thoại:</label>
         <textarea id="inputText" class="box" rows="4" placeholder="Nhập đoạn hội thoại ở đây..."></textarea>
-        <button id="playButton" onclick="playText()">Nghe Đoạn Văn</button>
+        <button id="playButton" onclick="playText()">NGHE ĐOẠN VĂN</button>
         <button id="continueButton" style="display: none;" onclick="playNextSentence()">Nghe Tiếp</button>
         <button id="repeatButton" style="display: none;" onclick="repeatText()">Nghe Toàn Bộ</button>
         <button id="replaySentenceButton" style="display: none;" onclick="replaySentence()">Nghe Lại Câu</button>
-
+        <br>
+        <br>
         <p>Số Lần Nghe: <span id="listenCount">0</span></p>
         <label>Nhập Lại Đoạn Nghe:</label>
         <textarea id="repeatText" class="box" rows="4" placeholder="Nhập lại đoạn bạn đã nghe..."></textarea>
+        <br>
         <p class="error" id="errorMessage"></p>
 
-        <div class="section">
-            <button id="evaluateButton" onclick="evaluateAndSave()">Đánh Giá</button>
+
+            <button id="evaluateButton"class="btn btn-evaluate"onclick="evaluateAndSave()">KẾT QUẢ</button>
+            <br>
+            <br>
             <p id="resultMessage"></p>
-        </div>
+
 
     </div>
 
     <div class="section">
-        <button id="exportButton">Xuất Dữ Liệu Lịch Sử</button> <!-- Nút xuất dữ liệu -->
+        <button id="exportButton">XUẤT DỮ LIỆU</button> <!-- Nút xuất dữ liệu -->
+        <br>
+        <br>
         <h2>Lịch Sử Luyện Tập (20 lần gần nhất)</h2>
         <p>Lưu ý: Có thể hiển thị sai vì người làm ra cái web này (huhuhut) quá mệt mỏi khi fix lỗi.</p>
         <table id="historyTable">
