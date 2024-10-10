@@ -61,8 +61,13 @@
             color: #d29858;
 	    font-weight: bold; /* In đậm */
 	    font-style: italic; /* In nghiêng */
-
         }
+        
+        .highlight-wrong {
+        color: red;
+        font-weight: bold;
+        }
+
         .success {
             color: #729da4;
 	    font-weight: bold; /* In đậm */
@@ -219,17 +224,17 @@ input[type="range"]:focus {
     <div class="section">
         <button id="exportButton">Xuất Dữ Liệu Lịch Sử</button> <!-- Nút xuất dữ liệu -->
         <h2>Lịch Sử Luyện Tập (20 lần gần nhất)</h2>
+        <p>Lưu ý: Có thể hiển thị sai vì người làm ra cái web này (huhuhut) quá mệt mỏi khi fix lỗi.</p>
         <table id="historyTable">
             <thead>
     		<tr>
         		<th>STT</th>
         		<th>Đoạn Văn</th>
-        		<th>Đoạn Nghe Lại</th>
+        		<th>Đoạn Nghe Lại </th>
         		<th>Điểm Số (%)</th>
         		<th>Số Từ Sai</th>
         		<th>Từ Sai</th> <!-- Thêm cột cho "Từ sai" -->
                 <th>Từ Đúng</th> <!-- Thêm cột từ đúng -->
-                <th>Lý Do</th> <!-- Thêm cột lý do -->
         		<th>Số Lần Nghe</th>
     		</tr>
 	    </thead>
@@ -509,6 +514,11 @@ function replaySentence() {
     }
 }
 
+// Hàm cập nhật số lần nghe
+function updateListenCount() {
+    listenCount++;
+    document.getElementById('listenCount').textContent = listenCount;
+}
 
 function levenshtein(a, b) {
     if (!a || !b) return Math.max((a || '').length, (b || '').length);
@@ -529,114 +539,111 @@ function levenshtein(a, b) {
     return matrix[a.length][b.length];
 }
 
+console.log("Current listenCount:", listenCount); // Kiểm tra giá trị listenCount
+
 function evaluateAndSave() {
     const repeatText = document.getElementById("repeatText").value.trim();
     const text = lastInputText.trim();
+
+    // Làm sạch văn bản nhập và văn bản người dùng
     const cleanedInput = text.replace(/[.,!?"]/g, '').split(" ");
     const cleanedRepeat = repeatText.replace(/[.,!?"]/g, '').split(" ");
 
-    console.log("Input text:", cleanedInput);
-    console.log("User repeat text:", cleanedRepeat);
-    
     let errors = 0;
     let wrongWords = [];
     let correctWords = [];
     let reasons = [];
+    let highlightedRepeatText = []; // Đoạn văn nghe lại có đánh dấu từ sai
     let inputIndex = 0;
     let userIndex = 0;
-    const lookaheadLimit = 3; // Số lượng từ tối đa có thể kiểm tra trước
+    const lookaheadLimit = 3;
 
-    console.log("Starting evaluation...");
-
-    processNext();
-
-    function processNext() {
-        console.log(`Processing word at inputIndex: ${inputIndex}, userIndex: ${userIndex}`);
+    while (inputIndex < cleanedInput.length || userIndex < cleanedRepeat.length) {
+        const expectedWord = cleanedInput[inputIndex];
+        const userWord = cleanedRepeat[userIndex];
         
-        if (inputIndex >= cleanedInput.length && userIndex >= cleanedRepeat.length) {
-            console.log("Evaluation completed. Updating results...");
-            const score = ((cleanedInput.length - errors) / cleanedInput.length) * 100;
-            const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${cleanedInput.length}`;
-            document.getElementById("resultMessage").innerText = resultMessage;
-
-            historyData.push({
-                text,
-                repeatText,
-                score: score.toFixed(2),
-                errors,
-                wrongWords: wrongWords.join(', '),
-                correctWords: correctWords.join(', '),
-                reasons: reasons.join(', ')
-            });
-
-            updateHistoryTable();
-            resetForm();
-            return;
-        }
-
-        const expectedWord = cleanedInput[inputIndex] || null;
-        const userWord = cleanedRepeat[userIndex] || null;
-
-        if (userWord && expectedWord && userWord === expectedWord) {
-            console.log(`Matched: ${userWord}`);
+        if (expectedWord === userWord) {
+            highlightedRepeatText.push(userWord);
             inputIndex++;
             userIndex++;
         } else {
-            // Nếu từ không khớp, kiểm tra các từ tiếp theo trong phạm vi lookahead
-            let foundMatch = false;
-            for (let lookahead = 1; lookahead <= lookaheadLimit; lookahead++) {
-                if (cleanedRepeat[userIndex + lookahead] === expectedWord) {
-                    console.log(`Out-of-order match: ${cleanedRepeat[userIndex + lookahead]} at userIndex: ${userIndex + lookahead}`);
-                    foundMatch = true;
-                    // Ghi lại lỗi sai thứ tự
-                    wrongWords.push(cleanedRepeat[userIndex]);
-                    correctWords.push(expectedWord);
-                    reasons.push("Sai thứ tự");
-                    userIndex += lookahead + 1; // Nhảy qua các từ đã kiểm tra
-                    inputIndex++;
-                    break;
+            let foundInLookahead = false;
+            let errorType = "";
+
+            if (expectedWord && (!userWord || cleanedInput.includes(userWord) && !cleanedRepeat.includes(expectedWord))) {
+                highlightedRepeatText.push(`<span class="highlight-wrong">(thiếu)</span>`);
+                correctWords.push(expectedWord);
+                reasons.push("Thiếu từ");
+                errorType = "Thiếu từ";
+                inputIndex++;
+                errors++;
+            } else if (userWord && (!expectedWord || cleanedRepeat.includes(expectedWord) && !cleanedInput.includes(userWord))) {
+                highlightedRepeatText.push(`<span class="highlight-wrong">${userWord}</span>`);
+                wrongWords.push(userWord);
+                correctWords.push("(thừa)");
+                reasons.push("Từ thừa");
+                errorType = "Từ thừa";
+                userIndex++;
+                errors++;
+            } else {
+                for (let lookahead = 1; lookahead <= lookaheadLimit; lookahead++) {
+                    if (cleanedRepeat[userIndex + lookahead] === expectedWord) {
+                        foundInLookahead = true;
+                        highlightedRepeatText.push(`<span class="highlight-wrong">${userWord}</span>`);
+                        wrongWords.push(userWord);
+                        correctWords.push(expectedWord);
+                        reasons.push("Sai thứ tự");
+                        errorType = "Sai thứ tự";
+                        userIndex += lookahead + 1;
+                        inputIndex++;
+                        errors++;
+                        break;
+                    }
                 }
-            }
-            
-            if (!foundMatch) {
-                // Xử lý các trường hợp khác: từ sai, thiếu từ, từ thừa, hoặc lỗi chính tả
-                if (userWord && !expectedWord) {
-                    console.log(`Extra word detected: ${userWord}`);
-                    wrongWords.push(userWord);
-                    correctWords.push("(thừa)");
-                    reasons.push("Từ thừa");
-                    userIndex++;
-                    errors++;
-                } else if (!userWord && expectedWord) {
-                    console.log(`Missing word: ${expectedWord}`);
-                    wrongWords.push("(thiếu)");
-                    correctWords.push(expectedWord);
-                    reasons.push("Thiếu từ");
-                    inputIndex++;
-                    errors++;
-                } else if (userWord && expectedWord && levenshtein(userWord, expectedWord) <= 2) {
-                    console.log(`Misspelled word: ${userWord} should be ${expectedWord}`);
-                    wrongWords.push(userWord);
-                    correctWords.push(expectedWord);
-                    reasons.push("Sai chính tả");
-                    inputIndex++;
-                    userIndex++;
-                    errors++;
-                } else {
-                    console.log(`Incorrect word or order: ${userWord} should be ${expectedWord}`);
-                    wrongWords.push(userWord);
-                    correctWords.push(expectedWord);
-                    reasons.push("Sai từ hoặc thứ tự");
+                if (!foundInLookahead) {
+                    if (userWord && expectedWord && levenshtein(userWord, expectedWord) <= 2) {
+                        highlightedRepeatText.push(`<span class="highlight-wrong">${userWord}</span>`);
+                        wrongWords.push(userWord);
+                        correctWords.push(expectedWord);
+                        reasons.push("Sai chính tả");
+                        errorType = "Sai chính tả";
+                    } else {
+                        highlightedRepeatText.push(`<span class="highlight-wrong">${userWord || "(thiếu)"}</span>`);
+                        wrongWords.push(userWord || "(thiếu)");
+                        correctWords.push(expectedWord || "(thừa)");
+                        reasons.push("Sai từ hoặc thứ tự");
+                        errorType = "Sai từ hoặc thứ tự";
+                    }
                     inputIndex++;
                     userIndex++;
                     errors++;
                 }
             }
         }
-
-        setTimeout(processNext, 0);
     }
+
+    const score = ((cleanedInput.length - errors) / cleanedInput.length) * 100;
+    const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${cleanedInput.length}`;
+    document.getElementById("resultMessage").innerText = resultMessage;
+
+    // Lưu lịch sử với đoạn văn nghe lại đã tô màu
+    if (historyData.length >= 20) {
+        historyData.shift();
+    }
+    historyData.push({
+        text,
+        repeatText: highlightedRepeatText.join(" "),
+        score: score.toFixed(2),
+        errors,
+        listenCount,
+        wrongWords: wrongWords.join(', '),
+        correctWords: correctWords.join(', '),
+        reasons: reasons.join(', ')
+    });
+    updateHistoryTable();
+    resetForm();
 }
+
 
 
 
@@ -648,7 +655,7 @@ function exportData() {
     const formattedDate = now.toLocaleString(); // Định dạng ngày giờ theo múi giờ hiện tại
 
     // Định nghĩa tiêu đề cột
-    const headers = "STT, Đoạn Văn, Đoạn Nghe Lại, Điểm Số, Số Từ Sai, Từ Sai, Từ Đúng, Lý Do, Số Lần Nghe, Ngày Xuất";
+    const headers = "STT, Đoạn Văn, Đoạn Nghe Lại, Điểm Số, Số Từ Sai, Từ Sai, Từ Đúng, Số Lần Nghe, Ngày Xuất";
 
     // Lấy dữ liệu từ các ô td
     const rows = Array.from(document.querySelectorAll('#historyTable tbody tr'))
@@ -679,6 +686,8 @@ function exportData() {
 // Gán sự kiện cho nút xuất dữ liệu
 document.getElementById('exportButton').addEventListener('click', exportData);
 
+
+
         function resetForm() {
             document.getElementById("inputText").value = '';
             document.getElementById("repeatText").value = '';
@@ -694,7 +703,7 @@ document.getElementById('exportButton').addEventListener('click', exportData);
 
         function updateHistoryTable() {
     const historyTableBody = document.getElementById("historyTableBody");
-    historyTableBody.innerHTML = ''; // Xóa nội dung trước đó
+    historyTableBody.innerHTML = ''; 
 
     historyData.forEach((entry, index) => {
         const row = document.createElement('tr');
@@ -704,14 +713,17 @@ document.getElementById('exportButton').addEventListener('click', exportData);
             <td>${entry.repeatText}</td>
             <td>${entry.score}</td>
             <td>${entry.errors}</td>
-            <td>${entry.wrongWords}</td> <!-- Hiển thị từ sai -->
-            <td>${entry.correctWords}</td> <!-- Hiển thị từ đúng -->
-            <td>${entry.reasons}</td> <!-- Hiển thị lý do -->
-            <td>${entry.listenCount}</td>
+            <td>${entry.wrongWords}</td>
+            <td>${entry.correctWords}</td>
+            <td>${entry.listenCount !== undefined ? entry.listenCount : 0}</td>
         `;
         historyTableBody.appendChild(row);
     });
 }
+
+
+
+
 
     </script>
 </body>
