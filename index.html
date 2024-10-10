@@ -514,74 +514,87 @@ function replaySentence() {
 
 function evaluateAndSave() {
     const repeatText = document.getElementById("repeatText").value.trim();
-    const text = lastInputText.trim(); // Đoạn văn gốc đã nhập
+    const text = lastInputText.trim();
+    const cleanedInput = text.replace(/[.,!?"]/g, '').split(" ");
+    const cleanedRepeat = repeatText.replace(/[.,!?"]/g, '').split(" ");
+    
     let errors = 0;
-    let wrongWords = []; // Mảng lưu trữ các từ sai
-    let correctWords = []; // Mảng lưu trữ các từ đúng (từ gốc cần sửa)
-    let reasons = []; // Mảng lưu trữ lý do cho các từ sai
-
-    // Tách đoạn văn thành từng từ
-    const inputWords = text.match(/\S+/g) || []; // Từ gốc
-    const userWords = repeatText.match(/\S+/g) || []; // Từ người dùng nhập
-
+    let wrongWords = [];
+    let correctWords = [];
+    let reasons = [];
     let inputIndex = 0;
     let userIndex = 0;
 
-    while (inputIndex < inputWords.length || userIndex < userWords.length) {
-        const expectedWord = inputWords[inputIndex]; // Từ gốc
-        const userWord = userWords[userIndex]?.toLowerCase(); // Chỉ chuyển đổi từ người dùng
+    while (inputIndex < cleanedInput.length || userIndex < cleanedRepeat.length) {
+        const expectedWord = cleanedInput[inputIndex] || ""; // Nếu không còn từ gốc
+        const userWord = cleanedRepeat[userIndex] || ""; // Nếu không còn từ người dùng
 
-        if (userWord === expectedWord.toLowerCase()) { // So sánh từ gốc với từ người dùng
-            // Nếu từ khớp, tiếp tục so sánh từ tiếp theo
+        // Trường hợp từ khớp
+        if (userWord === expectedWord) {
             inputIndex++;
             userIndex++;
-        } else {
-            // Từ không khớp, ta kiểm tra tiếp các từ để phát hiện từ thiếu hoặc thừa
-            let nextExpectedWord = inputWords[inputIndex + 1]; // Không chuyển đổi
-            let nextUserWord = userWords[userIndex + 1]?.toLowerCase(); // Chỉ chuyển đổi từ người dùng
-
-            if (userWord === nextExpectedWord.toLowerCase()) {
-                // Nếu từ người dùng khớp với từ gốc tiếp theo, nghĩa là người dùng đã bỏ qua một từ gốc
-                wrongWords.push(expectedWord); // Đánh dấu từ gốc bị thiếu
-                correctWords.push(expectedWord); // Ghi lại từ đúng cần sửa
-                reasons.push("Thiếu từ"); // Lý do
-                inputIndex++; // Chỉ tăng inputIndex để kiểm tra tiếp từ người dùng với từ gốc sau
-            } else if (nextUserWord === expectedWord.toLowerCase()) {
-                // Nếu từ tiếp theo của người dùng khớp với từ gốc hiện tại, nghĩa là người dùng nhập thêm từ
-                wrongWords.push(userWord); // Đánh dấu từ thừa của người dùng
-                correctWords.push(expectedWord); // Ghi lại từ đúng cần sửa
-                reasons.push("Thừa từ"); // Lý do
-                userIndex++; // Chỉ tăng userIndex để kiểm tra tiếp từ người dùng
-            } else {
-                // Nếu không khớp, cả hai từ đều sai
-                wrongWords.push(userWord); // Đánh dấu từ sai của người dùng
-                correctWords.push(expectedWord); // Ghi lại từ đúng cần sửa
-                reasons.push("Sai chính tả"); // Lý do
-                inputIndex++;
+        } 
+        // Trường hợp từ thừa
+        else if (userWord && !cleanedInput.includes(userWord)) {
+            wrongWords.push(userWord);
+            correctWords.push("(thừa)");
+            reasons.push("Thừa từ");
+            userIndex++;
+            errors++;
+        }
+        // Trường hợp từ thiếu
+        else if (expectedWord && !cleanedRepeat.includes(expectedWord)) {
+            wrongWords.push("(thiếu)");
+            correctWords.push(expectedWord); // Thêm từ gốc nếu thiếu
+            reasons.push("Thiếu từ");
+            inputIndex++;
+            errors++;
+        }
+        // Trường hợp sai chính tả
+        else if (userWord && expectedWord && userWord !== expectedWord) {
+            wrongWords.push(userWord);
+            correctWords.push(expectedWord); // Chỉ thêm từ gốc nếu sai chính tả
+            reasons.push("Sai chính tả");
+            inputIndex++;
+            userIndex++;
+            errors++;
+        }
+        // Nếu không có từ gốc và từ người dùng không khớp
+        else {
+            // Nếu userWord là từ nào đó nhưng không khớp, thì tăng chỉ số userIndex
+            if (userWord) {
                 userIndex++;
             }
-            errors++; // Tăng số lượng từ sai
+            // Nếu expectedWord là từ nào đó nhưng không khớp, thì tăng chỉ số inputIndex
+            if (expectedWord) {
+                inputIndex++;
+            }
         }
     }
 
-    
-
- // Tính điểm và hiển thị
- const score = ((inputWords.length - errors) / inputWords.length) * 100;
-    const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${inputWords.length}`;
+    // Tính điểm và cập nhật kết quả
+    const score = ((cleanedInput.length - errors) / cleanedInput.length) * 100;
+    const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${cleanedInput.length}`;
     document.getElementById("resultMessage").innerText = resultMessage;
 
+    // Lưu kết quả lịch sử
+    historyData.push({
+        text,
+        repeatText,
+        score: score.toFixed(2),
+        errors,
+        listenCount,
+        wrongWords: wrongWords.join(', '),
+        correctWords: correctWords.join(', '),
+        reasons: reasons.join(', ')
+    });
 
-
-    // Lưu lịch sử
-    if (historyData.length >= 20) {
-        historyData.shift(); // Xóa dòng đầu tiên nếu đã có 10 dòng
-    }
-        // Lưu dữ liệu lịch sử (bao gồm từ sai)
-        historyData.push({ text, repeatText, score: score.toFixed(2), errors, listenCount, wrongWords: wrongWords.join(', '), correctWords: correctWords.join(', '), reasons: reasons.join(', ') });
-        updateHistoryTable();
+    updateHistoryTable();
     resetForm();
 }
+
+
+
 
 // Hàm xuất dữ liệu từ bảng vào tệp CSV
 function exportData() {
