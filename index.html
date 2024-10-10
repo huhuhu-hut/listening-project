@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Listening</title>
     <style>
@@ -13,6 +14,20 @@
             background-color: #d29858; 
             color: #fffbf2; 
         }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 10px;
+        }
+
+        @media (max-width: 600px) {
+            /* Các style cho màn hình nhỏ */
+            body {
+                font-size: 14px;
+            }
+        }
+
         h1 {
             font-family: 'Lobster', monospace;
             font-size: 6rem;
@@ -23,6 +38,13 @@
             text-shadow: 7px 7px 0.1px #7f586d;
             letter-spacing: 5px; 
         }
+
+        h2 {
+            font-family: 'Questrial', monospace;
+            margin-top: 10px;
+            font-size: 1.5rem;
+        }
+
         .section {
             margin-bottom: 30px;
             background-color: #a15548;
@@ -82,7 +104,7 @@
         }
         table, th, td {
             font-family: 'Questrial', monospace;
-
+            font-size: 0.8rem;
             border: 2px solid #729da4; 
         }
         td {
@@ -229,13 +251,13 @@ input[type="range"]:focus {
             <thead>
     		<tr>
         		<th>STT</th>
-        		<th>Đoạn Văn</th>
-        		<th>Đoạn Nghe Lại </th>
-        		<th>Điểm Số (%)</th>
-        		<th>Số Từ Sai</th>
-        		<th>Từ Sai</th> <!-- Thêm cột cho "Từ sai" -->
-                <th>Từ Đúng</th> <!-- Thêm cột từ đúng -->
-        		<th>Số Lần Nghe</th>
+        		<th>ĐOẠN GỐC</th>
+        		<th>NHẬP LẠI</th>
+        		<th>ĐIỂM SỐ (%)</th>
+        		<th>SỐ TỪ SAI</th>
+        		<th>SAI</th> <!-- Thêm cột cho "Từ sai" -->
+                <th>ĐÚNG</th> <!-- Thêm cột từ đúng -->
+        		<th>SỐ LẦN NGHE</th>
     		</tr>
 	    </thead>
 
@@ -726,5 +748,9 @@ document.getElementById('exportButton').addEventListener('click', exportData);
 
 
     </script>
+
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+
 </body>
 </html>
