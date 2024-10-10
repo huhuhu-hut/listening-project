@@ -510,13 +510,33 @@ function replaySentence() {
 }
 
 
+function levenshtein(a, b) {
+    if (!a || !b) return Math.max((a || '').length, (b || '').length);
+    
+    const matrix = Array.from(Array(a.length + 1), () => new Array(b.length + 1).fill(0));
+    for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+    for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
 
+    for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+            if (a[i - 1] === b[j - 1]) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(matrix[i - 1][j - 1], matrix[i][j - 1], matrix[i - 1][j]) + 1;
+            }
+        }
+    }
+    return matrix[a.length][b.length];
+}
 
 function evaluateAndSave() {
     const repeatText = document.getElementById("repeatText").value.trim();
     const text = lastInputText.trim();
     const cleanedInput = text.replace(/[.,!?"]/g, '').split(" ");
     const cleanedRepeat = repeatText.replace(/[.,!?"]/g, '').split(" ");
+
+    console.log("Input text:", cleanedInput);
+    console.log("User repeat text:", cleanedRepeat);
     
     let errors = 0;
     let wrongWords = [];
@@ -524,73 +544,98 @@ function evaluateAndSave() {
     let reasons = [];
     let inputIndex = 0;
     let userIndex = 0;
+    const lookaheadLimit = 3; // Số lượng từ tối đa có thể kiểm tra trước
 
-    while (inputIndex < cleanedInput.length || userIndex < cleanedRepeat.length) {
-        const expectedWord = cleanedInput[inputIndex] || ""; // Nếu không còn từ gốc
-        const userWord = cleanedRepeat[userIndex] || ""; // Nếu không còn từ người dùng
+    console.log("Starting evaluation...");
 
-        // Trường hợp từ khớp
-        if (userWord === expectedWord) {
+    processNext();
+
+    function processNext() {
+        console.log(`Processing word at inputIndex: ${inputIndex}, userIndex: ${userIndex}`);
+        
+        if (inputIndex >= cleanedInput.length && userIndex >= cleanedRepeat.length) {
+            console.log("Evaluation completed. Updating results...");
+            const score = ((cleanedInput.length - errors) / cleanedInput.length) * 100;
+            const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${cleanedInput.length}`;
+            document.getElementById("resultMessage").innerText = resultMessage;
+
+            historyData.push({
+                text,
+                repeatText,
+                score: score.toFixed(2),
+                errors,
+                wrongWords: wrongWords.join(', '),
+                correctWords: correctWords.join(', '),
+                reasons: reasons.join(', ')
+            });
+
+            updateHistoryTable();
+            resetForm();
+            return;
+        }
+
+        const expectedWord = cleanedInput[inputIndex] || null;
+        const userWord = cleanedRepeat[userIndex] || null;
+
+        if (userWord && expectedWord && userWord === expectedWord) {
+            console.log(`Matched: ${userWord}`);
             inputIndex++;
             userIndex++;
-        } 
-        // Trường hợp từ thừa
-        else if (userWord && !cleanedInput.includes(userWord)) {
-            wrongWords.push(userWord);
-            correctWords.push("(thừa)");
-            reasons.push("Thừa từ");
-            userIndex++;
-            errors++;
-        }
-        // Trường hợp từ thiếu
-        else if (expectedWord && !cleanedRepeat.includes(expectedWord)) {
-            wrongWords.push("(thiếu)");
-            correctWords.push(expectedWord); // Thêm từ gốc nếu thiếu
-            reasons.push("Thiếu từ");
-            inputIndex++;
-            errors++;
-        }
-        // Trường hợp sai chính tả
-        else if (userWord && expectedWord && userWord !== expectedWord) {
-            wrongWords.push(userWord);
-            correctWords.push(expectedWord); // Chỉ thêm từ gốc nếu sai chính tả
-            reasons.push("Sai chính tả");
-            inputIndex++;
-            userIndex++;
-            errors++;
-        }
-        // Nếu không có từ gốc và từ người dùng không khớp
-        else {
-            // Nếu userWord là từ nào đó nhưng không khớp, thì tăng chỉ số userIndex
-            if (userWord) {
-                userIndex++;
+        } else {
+            // Nếu từ không khớp, kiểm tra các từ tiếp theo trong phạm vi lookahead
+            let foundMatch = false;
+            for (let lookahead = 1; lookahead <= lookaheadLimit; lookahead++) {
+                if (cleanedRepeat[userIndex + lookahead] === expectedWord) {
+                    console.log(`Out-of-order match: ${cleanedRepeat[userIndex + lookahead]} at userIndex: ${userIndex + lookahead}`);
+                    foundMatch = true;
+                    // Ghi lại lỗi sai thứ tự
+                    wrongWords.push(cleanedRepeat[userIndex]);
+                    correctWords.push(expectedWord);
+                    reasons.push("Sai thứ tự");
+                    userIndex += lookahead + 1; // Nhảy qua các từ đã kiểm tra
+                    inputIndex++;
+                    break;
+                }
             }
-            // Nếu expectedWord là từ nào đó nhưng không khớp, thì tăng chỉ số inputIndex
-            if (expectedWord) {
-                inputIndex++;
+            
+            if (!foundMatch) {
+                // Xử lý các trường hợp khác: từ sai, thiếu từ, từ thừa, hoặc lỗi chính tả
+                if (userWord && !expectedWord) {
+                    console.log(`Extra word detected: ${userWord}`);
+                    wrongWords.push(userWord);
+                    correctWords.push("(thừa)");
+                    reasons.push("Từ thừa");
+                    userIndex++;
+                    errors++;
+                } else if (!userWord && expectedWord) {
+                    console.log(`Missing word: ${expectedWord}`);
+                    wrongWords.push("(thiếu)");
+                    correctWords.push(expectedWord);
+                    reasons.push("Thiếu từ");
+                    inputIndex++;
+                    errors++;
+                } else if (userWord && expectedWord && levenshtein(userWord, expectedWord) <= 2) {
+                    console.log(`Misspelled word: ${userWord} should be ${expectedWord}`);
+                    wrongWords.push(userWord);
+                    correctWords.push(expectedWord);
+                    reasons.push("Sai chính tả");
+                    inputIndex++;
+                    userIndex++;
+                    errors++;
+                } else {
+                    console.log(`Incorrect word or order: ${userWord} should be ${expectedWord}`);
+                    wrongWords.push(userWord);
+                    correctWords.push(expectedWord);
+                    reasons.push("Sai từ hoặc thứ tự");
+                    inputIndex++;
+                    userIndex++;
+                    errors++;
+                }
             }
         }
+
+        setTimeout(processNext, 0);
     }
-
-    // Tính điểm và cập nhật kết quả
-    const score = ((cleanedInput.length - errors) / cleanedInput.length) * 100;
-    const resultMessage = `Điểm số: ${score.toFixed(2)}% - Số từ sai: ${errors}/${cleanedInput.length}`;
-    document.getElementById("resultMessage").innerText = resultMessage;
-
-    // Lưu kết quả lịch sử
-    historyData.push({
-        text,
-        repeatText,
-        score: score.toFixed(2),
-        errors,
-        listenCount,
-        wrongWords: wrongWords.join(', '),
-        correctWords: correctWords.join(', '),
-        reasons: reasons.join(', ')
-    });
-
-    updateHistoryTable();
-    resetForm();
 }
 
 
