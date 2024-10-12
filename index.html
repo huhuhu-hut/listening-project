@@ -339,6 +339,7 @@ function populateVoiceList() {
     const otherVoices = voices.filter(voice => !voice.lang.startsWith('de') && !voice.lang.startsWith('en'));
 
             // Thêm dòng phân tách giữa giọng Đức và giọng khác
+            if (germanVoices.length > 0) {
             const germanSeparator = document.createElement('option');
     germanSeparator.disabled = true; // Không cho phép chọn
     germanSeparator.textContent = "---------- Giọng đọc tiếng Đức ----------"; // Dòng phân tách
@@ -348,12 +349,13 @@ function populateVoiceList() {
     voiceSelect.appendChild(germanSeparator);    
 
     // Thêm giọng đọc tiếng Đức vào danh sách chọn
-    germanVoices.forEach((voice) => {
+    germanVoices.forEach((voice,index) => {
         const option = document.createElement('option');
         option.value = voice.name;
-        option.textContent = `${voice.name} (${voice.lang})`;
+                option.textContent = `${voice.name || 'Voice ' + (index + 1)} (${voice.lang})`;
         voiceSelect.appendChild(option);
     });
+}
 
     // Thêm dòng phân tách giữa giọng Anh và giọng khác
     const englishSeparator = document.createElement('option');
