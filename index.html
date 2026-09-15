@@ -149,6 +149,23 @@ html,body{max-width:100%;overflow-x:clip}
     .section,.section-history{padding:16px;border-radius:20px;}
 }
 /* ===== end unified section geometry ===== */
+
+.history-detail-panel{display:grid;gap:16px;margin-top:4px;padding:16px;border:2px solid var(--accent);border-radius:var(--radius);background:#743f3633}
+.history-detail-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.history-detail-header h2{margin:0}
+.history-detail-summary{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:var(--radius)}
+.video-detail-grid{display:grid;gap:14px}
+.video-unit-detail{display:grid;gap:10px;padding:14px;border-radius:var(--radius);background:var(--paper);color:var(--ink);border:1px solid #c7a5ad}
+.video-unit-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.video-unit-head strong{font-size:16px;color:var(--purple)}
+.video-unit-meta{font-size:13px;line-height:1.5}
+.video-unit-text{display:grid;gap:5px;padding:10px 12px;border-radius:8px;background:#fff7ec;white-space:pre-wrap;overflow-wrap:anywhere}
+.video-unit-text b{color:var(--purple)}
+.video-unit-errors{font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.video-unit-errors.ok{color:#315a38}
+.video-unit-errors.bad{color:#7a352f}
+@media(max-width:700px){.history-detail-panel{padding:12px}.video-unit-detail{padding:12px}.history-detail-header button{width:100%}}
+
 .video-finish-actions{align-items:center;padding-top:4px}
 #finishVideoStatus{flex:1 1 240px}
 .practice-nav button{min-width:110px}
@@ -172,7 +189,7 @@ html,body{max-width:100%;overflow-x:clip}
 </div>
 <div class="section" hidden="" id="mediaSection">
 <h2>Video Dictation</h2>
-<p class="score-help">Dán video và tải subtitle đúng nguồn. Nghe theo mốc thời gian, gõ lại rồi kiểm tra từng đoạn. Đáp án mặc định được ẩn.</p>
+<p class="score-help">Dán video và tải subtitle đúng nguồn (downsub.com). Nghe theo mốc thời gian, gõ lại rồi kiểm tra từng đoạn. Đáp án mặc định được ẩn.</p>
 <div class="media-row">
 <div class="media-input">
 <label for="videoUrl">Link video:</label>
@@ -317,6 +334,14 @@ html,body{max-width:100%;overflow-x:clip}
 <!-- Lịch sử sẽ được thêm vào đây -->
 </tbody>
 </table></div>
+<div id="historyDetailPanel" class="history-detail-panel" hidden>
+  <div class="history-detail-header">
+    <h2 id="historyDetailTitle">Chi tiết bài luyện</h2>
+    <button id="closeHistoryDetailButton" type="button">ĐÓNG</button>
+  </div>
+  <div id="historyDetailSummary"></div>
+  <div id="historyDetailUnits" class="video-detail-grid"></div>
+</div>
 </div><div class="section copy-manual" hidden="" id="manualCopy"><label for="manualCopyText">Chọn nội dung dưới đây → Ctrl+C để sao chép</label><textarea class="box" id="manualCopyText" readonly=""></textarea></div>
 <script>
         let attemptCompletedSentences=new Set(),videoAnswerRevealed=false;
@@ -429,21 +454,127 @@ html,body{max-width:100%;overflow-x:clip}
     }
 
     async function loadVideoFromUrl(){
-        const raw=mediaEl('videoUrl').value.trim();let u;try{u=new URL(raw);if(!['http:','https:'].includes(u.protocol))throw Error();}catch{setMediaStatus('Hãy nhập link video HTTP/HTTPS hợp lệ.',true);return;}
-        const id=extractYouTubeId(raw);if(!id&&!isDirectVideoUrl(raw)){setMediaStatus('Cần link YouTube hoặc file MP4/WebM/OGG trực tiếp.',true);return;}
-        if(location.protocol==='https:'&&u.protocol==='http:'){setMediaStatus('Trang HTTPS cần link video HTTPS để tránh bị trình duyệt chặn.',true);return;}
-        const previousUrl=loadedVideoUrl;const epoch=++mediaLoadEpoch;invalidateVideoPractice();hideAllPlayers();if(previousUrl&&previousUrl!==raw){subtitleCues=[];loadedSubtitleName='';renderSubtitleList();mediaEl('toggleSubtitlesButton').disabled=true;}loadedVideoUrl=raw;
+        const rawInput=mediaEl('videoUrl').value.trim();
+        let u;
+        try{
+            u=new URL(rawInput);
+            if(!['http:','https:'].includes(u.protocol))throw Error();
+        }catch{
+            setMediaStatus('Hãy nhập link video HTTP/HTTPS hợp lệ.',true);
+            return;
+        }
+
+        const id=extractYouTubeId(rawInput);
+        const directVideo=isDirectVideoUrl(rawInput);
+
+        if(!id&&!directVideo){
+            setMediaStatus('Cần link YouTube hợp lệ hoặc file MP4/WebM/OGG trực tiếp.',true);
+            return;
+        }
+
+        // YouTube is embedded through our HTTPS iframe anyway, so an old http://
+        // YouTube share URL is safe to normalize instead of rejecting it as mixed content.
+        let normalizedUrl=rawInput;
+        if(id){
+            u.protocol='https:';
+            normalizedUrl=u.href;
+            mediaEl('videoUrl').value=normalizedUrl;
+        }else if(location.protocol==='https:'&&u.protocol==='http:'){
+            // Direct <video src="http://..."> really would be mixed content.
+            setMediaStatus('File video trực tiếp cần link HTTPS khi website đang chạy bằng HTTPS.',true);
+            return;
+        }
+
+        const previousUrl=loadedVideoUrl;
+        const epoch=++mediaLoadEpoch;
+        invalidateVideoPractice();
+        hideAllPlayers();
+
+        if(previousUrl&&previousUrl!==normalizedUrl){
+            subtitleCues=[];
+            loadedSubtitleName='';
+            renderSubtitleList();
+            mediaEl('toggleSubtitlesButton').disabled=true;
+        }
+
+        loadedVideoUrl=normalizedUrl;
         setMediaStatus('Đang tải video…');
+
         try{
             if(id){
-                if(!['http:','https:'].includes(location.protocol)||location.origin==='null')throw Error('YouTube cần địa chỉ web HTTP/HTTPS; mở file HTML trực tiếp có thể bị lỗi 153.');
-                await loadYouTubeApi();if(epoch!==mediaLoadEpoch)return;
-                currentMediaType='youtube';const frame=document.createElement('iframe');frame.id='youtubePlayer';frame.title='Video luyện nghe';frame.referrerPolicy='strict-origin-when-cross-origin';frame.allow='autoplay; encrypted-media; picture-in-picture';frame.allowFullscreen=true;
-                const src=new URL('https://www.youtube-nocookie.com/embed/'+id);src.search=new URLSearchParams({enablejsapi:'1',origin:location.origin,playsinline:'1',cc_load_policy:'0',rel:'0'}).toString();frame.src=src.href;mediaEl('youtubePlayerWrap').querySelector('.youtube-frame').replaceChildren(frame);
-                mediaEl('mediaStage').hidden=false;mediaEl('youtubePlayerWrap').hidden=false;
-                youtubePlayer=new YT.Player(frame,{events:{onReady:()=>{if(epoch!==mediaLoadEpoch)return;mediaReady=true;setMediaStatus('Video sẵn sàng. Tải đúng subtitle của video rồi bắt đầu luyện. Tắt CC nếu YouTube đang hiện phụ đề.');refreshVideoPracticeAvailability();},onStateChange:e=>{if(epoch!==mediaLoadEpoch)return;if(e.data===1)startYoutubeTicker();else stopYoutubeTicker();},onError:e=>{if(epoch!==mediaLoadEpoch)return;mediaReady=false;refreshVideoPracticeAvailability();stopPracticeSegment();setMediaStatus(e.data===153?'YouTube thiếu thông tin nguồn trang (153). Mở URL HTTPS trong tab trình duyệt; kiểm tra tiện ích đang chặn Referer.':[101,150].includes(e.data)?'Chủ video không cho phép nhúng. Hãy chọn video khác.':'Không phát được YouTube (mã '+e.data+').',true);}}});
-            }else{currentMediaType='html5';const v=mediaEl('html5Video');v.src=raw;v.load();mediaEl('mediaStage').hidden=false;mediaEl('html5PlayerWrap').hidden=false;}
-        }catch(e){if(epoch===mediaLoadEpoch){mediaReady=false;setMediaStatus(e.message,true);refreshVideoPracticeAvailability();}}
+                if(!['http:','https:'].includes(location.protocol)||location.origin==='null'){
+                    throw Error('YouTube cần mở website qua localhost hoặc HTTPS/GitHub Pages; mở file HTML trực tiếp có thể bị lỗi 153.');
+                }
+
+                await loadYouTubeApi();
+                if(epoch!==mediaLoadEpoch)return;
+
+                currentMediaType='youtube';
+                const frame=document.createElement('iframe');
+                frame.id='youtubePlayer';
+                frame.title='Video luyện nghe';
+                frame.referrerPolicy='strict-origin-when-cross-origin';
+                frame.allow='autoplay; encrypted-media; picture-in-picture';
+                frame.allowFullscreen=true;
+
+                const src=new URL('https://www.youtube-nocookie.com/embed/'+id);
+                src.search=new URLSearchParams({
+                    enablejsapi:'1',
+                    origin:location.origin,
+                    playsinline:'1',
+                    cc_load_policy:'0',
+                    rel:'0'
+                }).toString();
+
+                frame.src=src.href;
+                mediaEl('youtubePlayerWrap').querySelector('.youtube-frame').replaceChildren(frame);
+                mediaEl('mediaStage').hidden=false;
+                mediaEl('youtubePlayerWrap').hidden=false;
+
+                youtubePlayer=new YT.Player(frame,{
+                    events:{
+                        onReady:()=>{
+                            if(epoch!==mediaLoadEpoch)return;
+                            mediaReady=true;
+                            setMediaStatus('Video sẵn sàng. Tải đúng subtitle của video rồi bắt đầu luyện. Tắt CC nếu YouTube đang hiện phụ đề.');
+                            refreshVideoPracticeAvailability();
+                        },
+                        onStateChange:e=>{
+                            if(epoch!==mediaLoadEpoch)return;
+                            if(e.data===1)startYoutubeTicker();
+                            else stopYoutubeTicker();
+                        },
+                        onError:e=>{
+                            if(epoch!==mediaLoadEpoch)return;
+                            mediaReady=false;
+                            refreshVideoPracticeAvailability();
+                            stopPracticeSegment();
+                            setMediaStatus(
+                                e.data===153
+                                    ?'YouTube thiếu thông tin nguồn trang (153). Hãy mở site bằng HTTPS/GitHub Pages và kiểm tra tiện ích chặn Referer.'
+                                    :[101,150].includes(e.data)
+                                        ?'Chủ video không cho phép nhúng. Hãy chọn video khác.'
+                                        :'Không phát được YouTube (mã '+e.data+').',
+                                true
+                            );
+                        }
+                    }
+                });
+            }else{
+                currentMediaType='html5';
+                const v=mediaEl('html5Video');
+                v.src=normalizedUrl;
+                v.load();
+                mediaEl('mediaStage').hidden=false;
+                mediaEl('html5PlayerWrap').hidden=false;
+            }
+        }catch(e){
+            if(epoch===mediaLoadEpoch){
+                mediaReady=false;
+                setMediaStatus(e.message,true);
+                refreshVideoPracticeAvailability();
+            }
+        }
     }
 
     function parseSubtitleTime(value){const s=value.trim().replace(',','.');if(!/^\d{1,}:\d{2}(?::\d{2})?(?:\.\d{1,3})?$/.test(s))return NaN;const a=s.split(':').map(Number);if(a.slice(1).some(n=>n>=60))return NaN;return a.reduce((v,n)=>v*60+n,0);}
@@ -843,6 +974,25 @@ html,body{max-width:100%;overflow-x:clip}
                 rates:state.entry.rates,
                 viewedReference:state.entry.viewedReference
             })),
+            // Full unit boundaries are kept so History, CSV and ChatGPT never have to
+            // guess where one listening segment ends and the next begins.
+            unitResults:checkedStates.map(({state,index})=>({
+                index:index+1,
+                start:state.entry.timestampStart,
+                end:state.entry.timestampEnd,
+                text:state.entry.text,
+                answer:state.entry.answer,
+                words:state.entry.words,
+                score:state.entry.score,
+                strictScore:state.entry.strictScore,
+                errors:state.entry.errors,
+                strictErrors:state.entry.strictErrors,
+                counts:{...state.entry.counts},
+                operations:state.entry.operations.map(o=>({...o})),
+                listenCount:state.entry.listenCount,
+                rates:[...state.entry.rates],
+                viewedReference:Boolean(state.entry.viewedReference)
+            })),
             operations,
             counts,
             words,
@@ -899,10 +1049,15 @@ html,body{max-width:100%;overflow-x:clip}
 
     function validHistoryEntry(e){
         if(!e||!['de','en'].includes(e.language)||!['word-align-v1','word-align-en-v1'].includes(e.algorithm))return false;
-        if(typeof e.id!=='string'||e.id.length>150||typeof e.text!=='string'||typeof e.answer!=='string'||e.text.length>30000||e.answer.length>30000||!Number.isFinite(Date.parse(e.date)))return false;
-        for(const k of ['score','strictScore','words','errors','strictErrors','listenCount'])if(typeof e[k]!=='number'||!Number.isFinite(e[k])||e[k]<0||e[k]>10000)return false;
-        const opLimit=e.videoSession?12000:2000;
+        const textLimit=e.videoSession?300000:30000;
+        if(typeof e.id!=='string'||e.id.length>150||typeof e.text!=='string'||typeof e.answer!=='string'||e.text.length>textLimit||e.answer.length>textLimit||!Number.isFinite(Date.parse(e.date)))return false;
+        for(const k of ['score','strictScore','words','errors','strictErrors','listenCount'])if(typeof e[k]!=='number'||!Number.isFinite(e[k])||e[k]<0||e[k]>100000)return false;
+        const opLimit=e.videoSession?20000:2000;
         if(e.score>100||e.strictScore>100||!e.counts||!Array.isArray(e.operations)||e.operations.length>opLimit)return false;
+        if(e.unitResults!==undefined){
+            if(!Array.isArray(e.unitResults)||e.unitResults.length>1000)return false;
+            if(!e.unitResults.every(u=>u&&Number.isInteger(u.index)&&u.index>0&&typeof u.text==='string'&&typeof u.answer==='string'&&u.text.length<30000&&u.answer.length<30000&&Array.isArray(u.operations)&&u.operations.length<=2000))return false;
+        }
         for(const k of ['correct','umlaut','near','wrong','missing','extra'])if(!Number.isInteger(e.counts[k])||e.counts[k]<0||e.counts[k]>opLimit)return false;
         if(!e.operations.every(o=>o&&['correct','umlaut','near','wrong','missing','extra'].includes(o.type)&&typeof o.expected==='string'&&typeof o.actual==='string'&&o.expected.length<30000&&o.actual.length<30000))return false;
         return ['rates','voices'].every(k=>Array.isArray(e[k])&&e[k].length<100&&e[k].every(v=>typeof v==='string'&&v.length<300));
@@ -1442,8 +1597,8 @@ function updateHistoryTable(){
  scoreEl('historyTableBody').innerHTML=rows.map(e=>{
   const isVideoSession=e.source==='video'&&e.videoSession;
   const sourceLabel=isVideoSession?`VIDEO · ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||'?'} ĐOẠN`:e.source==='video'?`VIDEO ${formatCueTime(e.timestampStart||0)}`:'TTS';
-  const originalDisplay=isVideoSession?`${e.subtitleFile||'Subtitle'} · ${formatCueTime(e.timestampStart||0)} → ${formatCueTime(e.timestampEnd||0)} · ${e.words} từ gốc`:e.text;
-  const answerDisplay=isVideoSession?`${e.partialVideoSession?'Hoàn thành sớm':'Hoàn thành'} ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||0} đoạn · ${e.listenCount} lượt nghe`:e.answer;
+  const originalDisplay=isVideoSession?`${e.subtitleFile||'Subtitle'} · ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||'?'} đoạn · ${e.words} từ gốc · XEM CHI TIẾT để xem toàn văn`:e.text;
+  const answerDisplay=isVideoSession?`${e.partialVideoSession?'Hoàn thành sớm':'Hoàn thành'} · ${e.listenCount} lượt nghe · XEM CHI TIẾT để xem từng câu trả lời`:e.answer;
   const base=[
    cell(labels[0],safeText(new Date(e.date).toLocaleString('vi-VN'))),
    cell(labels[1],safeText(sourceLabel)),
@@ -1461,7 +1616,7 @@ function updateHistoryTable(){
       cell(labels[9],`${e.counts.missing} / ${e.counts.extra}`),
       cell(labels[10],String(e.listenCount)),
       cell(labels[11],safeText(e.rates.join(', '))),
-      cell(labels[12],`<button type="button" data-score-id="${safeText(e.id)}">XEM LỖI</button>`)
+      cell(labels[12],`<button type="button" data-score-id="${safeText(e.id)}">${isVideoSession?'XEM CHI TIẾT':'XEM LỖI'}</button>`)
     ]
    :[
       cell(labels[4],formatScore(e.strictScore)+'%'),
@@ -1470,15 +1625,52 @@ function updateHistoryTable(){
       cell(labels[7],`${e.counts.missing} / ${e.counts.extra}`),
       cell(labels[8],String(e.listenCount)),
       cell(labels[9],safeText(e.rates.join(', '))),
-      cell(labels[10],`<button type="button" data-score-id="${safeText(e.id)}">XEM LỖI</button>`)
+      cell(labels[10],`<button type="button" data-score-id="${safeText(e.id)}">${isVideoSession?'XEM CHI TIẾT':'XEM LỖI'}</button>`)
     ];
 
   return `<tr>${[...base,...tail].join('')}</tr>`;
  }).join('');
 }
-function errorDetailText(e){
- return e.operations.filter(o=>o.type!=='correct').map(o=>`${o.expected||'∅'} → ${o.actual||'∅'} (${errorLabels[o.type]})`).join(' | ')||'Không có lỗi.';
+function operationErrorText(operations){
+ return (operations||[]).filter(o=>o.type!=='correct').map(o=>`${o.expected||'∅'} → ${o.actual||'∅'} (${errorLabels[o.type]||o.type})`).join(' | ')||'Không có lỗi.';
 }
+function videoSessionUnits(entry){
+ if(Array.isArray(entry.unitResults)&&entry.unitResults.length)return entry.unitResults;
+ return [];
+}
+function renderVideoHistoryDetail(entry){
+ const panel=scoreEl('historyDetailPanel'),summary=scoreEl('historyDetailSummary'),unitsEl=scoreEl('historyDetailUnits');
+ const isDE=entry.language==='de', units=videoSessionUnits(entry), primary=isDE?entry.score:entry.strictScore;
+ scoreEl('historyDetailTitle').textContent=`Chi tiết bài video · ${entry.completedUnits||units.length||0}/${entry.practiceTotal||entry.completedUnits||units.length||0} đoạn`;
+ summary.className='history-detail-summary';
+ summary.innerHTML=`
+   <div><b>Thời gian:</b> ${safeText(new Date(entry.date).toLocaleString('vi-VN'))}</div>
+   <div><b>Video:</b> ${safeText(entry.mediaUrl||'—')}</div>
+   <div><b>Subtitle:</b> ${safeText(entry.subtitleFile||'—')}</div>
+   <div><b>Phạm vi đã chấm:</b> ${safeText(String(entry.completedUnits||units.length||0))}/${safeText(String(entry.practiceTotal||entry.completedUnits||units.length||0))} đoạn · ${safeText(String(entry.words))} từ · ${safeText(String(entry.listenCount))} lượt nghe</div>
+   <div><b>Điểm:</b> ${isDE?`bỏ umlaut ${formatScore(entry.score)}% · chính tả ${formatScore(entry.strictScore)}%`:`khớp từ ${formatScore(primary)}%`}</div>
+   <div><b>Tổng lỗi:</b> ${safeText(String(entry.errors))}${isDE?` · khác umlaut ${safeText(String(entry.counts.umlaut))}`:''} · gần giống ${safeText(String(entry.counts.near))} · sai ${safeText(String(entry.counts.wrong))} · thiếu ${safeText(String(entry.counts.missing))} · thừa ${safeText(String(entry.counts.extra))}</div>`;
+
+ if(!units.length){
+   unitsEl.innerHTML=`<div class="video-unit-detail"><strong>Lượt lịch sử cũ</strong><div class="video-unit-text"><b>ĐOẠN GỐC (đã gộp)</b>${safeText(entry.text)}</div><div class="video-unit-text"><b>BẠN NHẬP (đã gộp)</b>${safeText(entry.answer)}</div><div class="video-unit-errors bad">Lượt này được lưu trước khi web hỗ trợ ranh giới từng đoạn, nên không thể khôi phục chính xác từng unit.</div></div>`;
+ }else{
+   unitsEl.innerHTML=units.map(u=>{
+      const errs=(u.operations||[]).filter(o=>o.type!=='correct');
+      const scoreText=isDE?`Bỏ umlaut ${formatScore(u.score)}% · Chính tả ${formatScore(u.strictScore)}%`:`Khớp từ ${formatScore(u.strictScore)}%`;
+      return `<article class="video-unit-detail">
+        <div class="video-unit-head"><strong>Đoạn ${safeText(String(u.index))}</strong><span>${formatCueTime(u.start||0)} → ${formatCueTime(u.end||0)}</span></div>
+        <div class="video-unit-meta">${scoreText} · ${safeText(String(u.words))} từ · nghe ${safeText(String(u.listenCount))} lượt · tốc độ ${safeText((u.rates||[]).join(', ')||'không ghi nhận')}</div>
+        <div class="video-unit-text"><b>ĐOẠN GỐC</b>${safeText(u.text)}</div>
+        <div class="video-unit-text"><b>BẠN NHẬP</b>${safeText(u.answer)}</div>
+        <div class="video-unit-errors ${errs.length?'bad':'ok'}"><b>LỖI:</b> ${safeText(operationErrorText(u.operations))}</div>
+      </article>`;
+   }).join('');
+ }
+ panel.hidden=false;
+ panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function errorDetailText(e){return operationErrorText(e.operations);}
 function chatGPTInstruction(language){
  if(language==='en') return `YÊU CẦU PHÂN TÍCH CHO CHATGPT
 - Đánh giá khả năng nghe tiếng Anh và xu hướng tiến bộ dựa trên dữ liệu bên dưới; phân biệt lỗi nghe, lỗi spelling, khả năng gõ nhầm và lỗi do connected speech/contraction khi có cơ sở. Không kết luận quá mức từ một lượt hoặc từ bài chưa làm hết.
@@ -1500,9 +1692,34 @@ function chatGPTInstruction(language){
 - Cuối cùng đề xuất 3-5 điểm cần luyện tiếp dựa trên các lỗi lặp lại trong lịch sử.`;
 }
 function sameLessonIdentity(e){return JSON.stringify([e.language,e.source||'tts',scoreTokens(e.text).map(x=>normWord(x,e.language)).join(' '),e.mediaUrl||'',e.timestampStart??null,e.timestampEnd??null]);}
+function videoSessionCopyBlock(entry){
+ const isDE=entry.language==='de',units=videoSessionUnits(entry);
+ if(!units.length)return [
+   '=== CHI TIẾT VIDEO LEGACY (KHÔNG CÓ RANH GIỚI UNIT) ===',
+   `${isDE?'Đoạn gốc':'Original text'}: ${entry.text}`,
+   `Tôi nhập: ${entry.answer}`,
+   `Chi tiết lỗi: ${errorDetailText(entry)}`
+ ].join('\n');
+ return [
+   `=== CHI TIẾT TỪNG ĐOẠN VIDEO: ${units.length} ĐOẠN ĐÃ CHẤM ===`,
+   'QUAN TRỌNG: mỗi mục dưới đây là một unit độc lập. Không gộp ranh giới giữa các unit khi phân tích lỗi.',
+   ...units.map(u=>[
+      `--- ĐOẠN ${u.index} · ${formatCueTime(u.start||0)} → ${formatCueTime(u.end||0)} ---`,
+      `${isDE?'ĐOẠN GỐC':'ORIGINAL'}: ${u.text}`,
+      `TÔI NHẬP: ${u.answer}`,
+      isDE?`ĐIỂM: bỏ umlaut ${formatScore(u.score)}% | chính tả ${formatScore(u.strictScore)}%`:`ĐIỂM KHỚP TỪ: ${formatScore(u.strictScore)}%`,
+      `LƯỢT NGHE: ${u.listenCount} | TỐC ĐỘ: ${(u.rates||[]).join(', ')||'không ghi nhận'}`,
+      `LỖI: ${operationErrorText(u.operations)}`
+   ].join('\n'))
+ ].join('\n\n');
+}
+
 function buildCurrentCopy(entry){
  const sameLesson=historyData.filter(e=>sameLessonIdentity(e)===sameLessonIdentity(entry));
  const isDE=entry.language==='de';
+ if(entry.source==='video'&&entry.videoSession){
+  return [chatGPTInstruction(entry.language),'',`=== BÀI VIDEO ${entry.completedUnits||0}/${entry.practiceTotal||entry.completedUnits||0} ĐOẠN ĐÃ CHẤM ===`,`Thời gian: ${new Date(entry.date).toLocaleString('vi-VN')}`,`URL: ${entry.mediaUrl||'—'}`,`Subtitle: ${entry.subtitleFile||'—'}`,`Tổng từ đã chấm: ${entry.words}; tổng lượt nghe: ${entry.listenCount}`,`Điểm tổng: ${entry.language==='de'?`bỏ umlaut ${formatScore(entry.score)}% | chính tả ${formatScore(entry.strictScore)}%`:`khớp từ ${formatScore(entry.strictScore)}%`}`,videoSessionCopyBlock(entry)].join('\n');
+ }
  return [
   chatGPTInstruction(entry.language),'',
   '=== KẾT QUẢ LƯỢT HIỆN TẠI ===',
@@ -1527,22 +1744,27 @@ function buildCurrentCopy(entry){
 }
 function buildHistoryCopy(){
  const items=historyData.filter(e=>e.language===selectedLanguage).slice(-20),isDE=selectedLanguage==='de';
+ const blocks=items.map((e,i)=>{
+   const head=[
+     `=== LƯỢT ${i+1} / ${items.length} ===`,
+     `Thời gian: ${new Date(e.date).toLocaleString('vi-VN')}`,
+     `Nguồn: ${e.source==='video'?(e.videoSession?`VIDEO SESSION · ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||0} đoạn đã chấm`:`VIDEO · ${formatCueTime(e.timestampStart||0)} → ${formatCueTime(e.timestampEnd||0)}`):'TEXT / TTS'}`,
+     `Mức hoàn thành: ${coverageText(e)}`,
+     isDE?`Điểm: bỏ umlaut ${formatScore(e.score)}% | chính tả ${formatScore(e.strictScore)}%`:`Điểm khớp từ: ${formatScore(e.strictScore)}%`,
+     `Tổng lỗi: ${e.errors}; lượt nghe: ${e.listenCount}; tốc độ: ${e.rates.join(', ')||'không ghi nhận'}`
+   ];
+   if(e.source==='video'&&e.videoSession){
+     head.push(`URL: ${e.mediaUrl||'—'}`,`Subtitle: ${e.subtitleFile||'—'}`,videoSessionCopyBlock(e));
+   }else{
+     head.push(`${isDE?'ĐOẠN GỐC':'ORIGINAL'}: ${e.text}`,`TÔI NHẬP: ${e.answer}`,`LỖI: ${errorDetailText(e)}`);
+   }
+   return head.join('\n');
+ });
  return [
   chatGPTInstruction(selectedLanguage),'',
   `=== LỊCH SỬ LUYỆN NGHE ${isDE?'TIẾNG ĐỨC':'TIẾNG ANH'}: ${items.length} LƯỢT GẦN NHẤT ===`,
-  'Lưu ý: các bài khác nhau không nên so điểm trực tiếp như cùng độ khó. Ưu tiên tìm lỗi lặp lại và xu hướng ở những lượt cùng bài/nguồn/tốc độ; với Video, chỉ so trực tiếp các lượt có cùng đoạn timestamp.','',
-  ...items.map((e,i)=>[
-    `--- Lượt ${i+1} ---`,
-    `Thời gian: ${new Date(e.date).toLocaleString('vi-VN')}`,
-    `Nguồn: ${e.source==='video'?`Video · ${formatCueTime(e.timestampStart||0)} → ${formatCueTime(e.timestampEnd||0)} · ${e.subtitleFile||'subtitle'}`:'Text / TTS'}`,
-    `${isDE?'Đoạn gốc':'Original text'}: ${e.text}`,
-    `Tôi nhập: ${e.answer}`,
-    `URL / nguồn: ${e.mediaUrl||'TTS'}; mức hoàn thành: ${coverageText(e)}`, 
-    isDE?`Điểm: bỏ umlaut ${formatScore(e.score)}% | chính tả ${formatScore(e.strictScore)}%`:`Điểm khớp từ: ${formatScore(e.strictScore)}%`,
-    isDE?`Lỗi: umlaut ${e.counts.umlaut} | gần giống ${e.counts.near} | sai ${e.counts.wrong} | thiếu ${e.counts.missing} | thừa ${e.counts.extra}`:`Lỗi: gần giống ${e.counts.near} | sai ${e.counts.wrong} | thiếu ${e.counts.missing} | thừa ${e.counts.extra}`,
-    `Lượt nghe: ${e.listenCount} | tốc độ: ${e.rates.join(', ')||'không ghi nhận'} | giọng: ${e.voices.join(', ')||'không ghi nhận'}`,
-    `Chi tiết: ${errorDetailText(e)}`
-  ].join('\n'))
+  'Dữ liệu video được chia rõ theo từng unit. Khi nhận xét lỗi, giữ nguyên ranh giới ĐOẠN 1, ĐOẠN 2...; không ghép các câu trả lời của nhiều unit thành một chuỗi.',
+  ...blocks
  ].join('\n\n');
 }
 async function copyText(text,statusId){
@@ -1589,10 +1811,36 @@ document.querySelectorAll('[data-language-tab]').forEach(btn=>btn.addEventListen
 
 function exportData(){
  if(!historyData.length){scoreEl('historyStorageStatus').textContent='Chưa có lịch sử để xuất.';return;}
- const rows=[['Mã lượt','Thời gian','Nguồn','Video URL','Timestamp bắt đầu','Timestamp kết thúc','Đoạn gốc','Bạn nhập','Điểm bỏ umlaut %','Điểm chính tả %','Số từ gốc','Lỗi bỏ umlaut','Lỗi chính tả','Khác umlaut','Từ gần giống','Sai từ','Thiếu','Thừa','Lượt nghe','Ngôn ngữ','Tốc độ đã dùng','Giọng/Nguồn phát','Chi tiết lỗi','Cách chấm']];
- for(const e of historyData)rows.push([e.id,e.date,e.source||'tts',e.mediaUrl||'',e.timestampStart??'',e.timestampEnd??'',e.text,e.answer,formatScore(e.score),formatScore(e.strictScore),e.words,e.errors,e.strictErrors,e.counts.umlaut,e.counts.near,e.counts.wrong,e.counts.missing,e.counts.extra,e.listenCount,e.language,e.rates.join(' / '),e.voices.join(' / '),e.operations.filter(o=>o.type!=='correct').map(o=>`${o.expected||'∅'} → ${o.actual||'∅'} (${errorLabels[o.type]})`).join(' | '),e.algorithm]);
+ const header=['Mã lượt','Loại dòng','Thời gian','Nguồn','Video URL','Subtitle','Đã chấm / Tổng đoạn','Đoạn số','Timestamp bắt đầu','Timestamp kết thúc','Đoạn gốc','Bạn nhập','Điểm bỏ umlaut %','Điểm chính tả %','Số từ gốc','Lỗi bỏ umlaut','Lỗi chính tả','Khác umlaut','Từ gần giống','Sai từ','Thiếu','Thừa','Lượt nghe đoạn','Tổng lượt nghe bài','Ngôn ngữ','Tốc độ','Giọng/Nguồn phát','Chi tiết lỗi','Cách chấm'];
+ const rows=[header];
+ const pushRow=(e,type,unit=null)=>{
+   const u=unit||e, isUnit=Boolean(unit);
+   rows.push([
+     e.id,type,e.date,e.source||'tts',e.mediaUrl||'',e.subtitleFile||'',
+     e.videoSession?`${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||0}`:'',
+     isUnit?u.index:'',
+     isUnit?u.start:(e.timestampStart??''),isUnit?u.end:(e.timestampEnd??''),
+     isUnit?u.text:e.text,isUnit?u.answer:e.answer,
+     formatScore(isUnit?u.score:e.score),formatScore(isUnit?u.strictScore:e.strictScore),
+     isUnit?u.words:e.words,isUnit?u.errors:e.errors,isUnit?u.strictErrors:e.strictErrors,
+     (isUnit?u.counts:e.counts)?.umlaut??0,(isUnit?u.counts:e.counts)?.near??0,(isUnit?u.counts:e.counts)?.wrong??0,
+     (isUnit?u.counts:e.counts)?.missing??0,(isUnit?u.counts:e.counts)?.extra??0,
+     isUnit?u.listenCount:e.listenCount,e.videoSession?e.listenCount:e.listenCount,e.language,
+     (isUnit?u.rates:e.rates||[]).join(' / '),(e.voices||[]).join(' / '),
+     operationErrorText(isUnit?u.operations:e.operations),e.algorithm
+   ]);
+ };
+ for(const e of historyData){
+   if(e.source==='video'&&e.videoSession){
+     // Session summary row first, then one fully readable row per checked unit.
+     rows.push([e.id,'BÀI VIDEO',e.date,'video',e.mediaUrl||'',e.subtitleFile||'',`${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||0}`,'',e.timestampStart??'',e.timestampEnd??'',`TÓM TẮT: ${e.completedUnits||0} đoạn đã chấm`,`Tổng ${e.listenCount} lượt nghe`,formatScore(e.score),formatScore(e.strictScore),e.words,e.errors,e.strictErrors,e.counts.umlaut,e.counts.near,e.counts.wrong,e.counts.missing,e.counts.extra,'',e.listenCount,e.language,e.rates.join(' / '),e.voices.join(' / '),errorDetailText(e),e.algorithm]);
+     const units=videoSessionUnits(e);
+     if(units.length)units.forEach(u=>pushRow(e,'ĐOẠN VIDEO',u));
+     else pushRow(e,'VIDEO LEGACY (ĐÃ GỘP)');
+   }else pushRow(e,e.source==='video'?'ĐOẠN VIDEO CŨ':'TTS');
+ }
  const csv='\uFEFF'+rows.map(row=>row.map(v=>{let s=String(v??'');if(/^\s*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
- const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='listening-progress.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='listening-progress-structured.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function retryLastLesson(){if(!latestScored)return;const retryEntry=latestScored;switchLanguage(retryEntry.language);if(selectedLanguage!==retryEntry.language)return;switchSourceMode(retryEntry.source==='video'?'video':'tts');if(latestScored.source==='video'){switchSourceMode('video');setMediaStatus('Đây là lượt từ video. Nếu video/subtitle hiện tại đúng nguồn cũ, hãy chọn lại unit tương ứng; trình duyệt không thể tự nạp lại file subtitle cục bộ sau khi trang được mở lại.');return;}stopScoringPlayback();resetForm();scoreEl('inputText').value=latestScored.text;scoreEl('languageSelect').value=latestScored.language;if(latestScored.rates.length===1){scoreEl('rateSelect').value=latestScored.rates[0];updateRateValue();}if(latestScored.voices.length===1&&voices.some(v=>v.name===latestScored.voices[0]))scoreEl('voiceSelect').value=latestScored.voices[0];scoreEl('scoreDetails').hidden=true;scoreEl('resultMessage').textContent='Bài đã sẵn sàng. Nhấn NGHE ĐOẠN VĂN để bắt đầu lượt mới.';scoreEl('inputText').focus();}
 function clearCurrentLanguageHistory(){
@@ -1608,13 +1856,25 @@ function clearCurrentLanguageHistory(){
  if(latestScored?.language===language) latestScored=null;
  saveScoreHistory();
  updateHistoryTable();
+ scoreEl('historyDetailPanel').hidden=true;
  scoreEl('copyHistoryStatus').textContent=`Đã xóa ${count} lượt lịch sử ${languageLabel}.`;
 }
 scoreEl('exportButton').addEventListener('click',exportData);
 scoreEl('clearHistoryButton').addEventListener('click',clearCurrentLanguageHistory);
 scoreEl('copyHistoryButton').addEventListener('click',copyRecentHistory);
 scoreEl('retryLessonButton').addEventListener('click',retryLastLesson);
-scoreEl('historyTableBody').addEventListener('click',e=>{const button=e.target.closest('[data-score-id]');if(!button)return;const entry=historyData.find(x=>x.id===button.dataset.scoreId);if(entry){latestScored=entry;renderScore(entry);scoreEl('retryLessonButton').hidden=entry.source==='video';switchSourceMode('tts');scoreEl('scoreDetails').scrollIntoView({behavior:'smooth',block:'start'});}});
+scoreEl('historyTableBody').addEventListener('click',e=>{
+ const button=e.target.closest('[data-score-id]');if(!button)return;
+ const entry=historyData.find(x=>x.id===button.dataset.scoreId);if(!entry)return;
+ latestScored=entry;
+ if(entry.source==='video'){
+  renderVideoHistoryDetail(entry);
+  return;
+ }
+ scoreEl('historyDetailPanel').hidden=true;
+ renderScore(entry);scoreEl('retryLessonButton').hidden=false;switchSourceMode('tts');scoreEl('scoreDetails').scrollIntoView({behavior:'smooth',block:'start'});
+});
+scoreEl('closeHistoryDetailButton').addEventListener('click',()=>{scoreEl('historyDetailPanel').hidden=true;});
 try{const saved=JSON.parse(localStorage.getItem(SCORE_HISTORY_KEY)||'[]');if(Array.isArray(saved))historyData=saved.filter(validHistoryEntry).slice(-100);}catch{scoreEl('historyStorageStatus').textContent='Không đọc được lịch sử trên trình duyệt.';}
 
 
