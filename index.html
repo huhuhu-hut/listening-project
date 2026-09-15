@@ -149,23 +149,17 @@ html,body{max-width:100%;overflow-x:clip}
     .section,.section-history{padding:16px;border-radius:20px;}
 }
 /* ===== end unified section geometry ===== */
+.video-finish-actions{align-items:center;padding-top:4px}
+#finishVideoStatus{flex:1 1 240px}
+.practice-nav button{min-width:110px}
+@media(max-width:700px){.practice-nav button{flex:1 1 120px}.video-finish-actions button{width:100%}}
 
 
-/* ===== Piper local TTS ===== */
-.tts-engine-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-.tts-engine-panel{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:#743f3626}
-.piper-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.piper-actions button{margin:0}
-.piper-progress{display:grid;gap:6px}
-.piper-progress-bar{height:10px;border-radius:999px;overflow:hidden;background:#7c5a68}
-.piper-progress-bar>span{display:block;width:0;height:100%;background:var(--paper);transition:width .18s ease}
-.piper-status{font-size:14px;line-height:1.55}
-.piper-note{font-size:13px;line-height:1.55;opacity:.95}
-@media(max-width:700px){.piper-actions button{flex:1 1 160px}}
-/* ===== end Piper local TTS ===== */
+
 
 </style>
-<meta content="strict-origin-when-cross-origin" name="referrer"/></head>
+<meta content="strict-origin-when-cross-origin" name="referrer"/>
+</head>
 <body>
 <h1>Listening</h1>
 <div aria-label="Ngôn ngữ luyện nghe" class="language-tabs" role="tablist">
@@ -234,21 +228,25 @@ html,body{max-width:100%;overflow-x:clip}
 <span class="practice-time" id="videoPracticeTime">00:00 → 00:00</span>
 <span>Đã nghe: <span id="videoListenCount">0</span></span>
 </div>
-<div class="practice-actions">
-<button id="playVideoUnitButton" type="button">▶ PLAY ĐOẠN NÀY</button>
-<button id="replayVideoUnitButton" type="button">↻ REPLAY</button>
-<button id="skipVideoUnitButton" type="button">BỎ QUA →</button>
-<button id="stopVideoButton" type="button">DỪNG</button></div>
+<div class="practice-actions practice-nav">
+<button id="backVideoUnitButton" type="button">← BACK</button>
+<button id="playVideoUnitButton" type="button">▶ PLAY</button>
+<button id="nextVideoUnitButton" type="button">NEXT →</button>
+<button id="stopVideoButton" type="button">DỪNG</button>
+</div>
 <label for="videoAnswerText">Bạn nghe được gì?</label>
 <textarea autocapitalize="off" class="box practice-answer" id="videoAnswerText" maxlength="30000" placeholder="Gõ lại đúng những gì bạn nghe được..." spellcheck="false"></textarea>
 <div class="practice-actions">
 <button class="btn-evaluate" id="checkVideoAnswerButton" type="button">KẾT QUẢ</button>
-<button hidden="" id="nextVideoUnitButton" type="button">CÂU TIẾP →</button>
-<button hidden="" id="copyVideoResultButton" type="button">COPY KẾT QUẢ</button>
+<button hidden="" id="copyVideoResultButton" type="button">COPY KẾT QUẢ ĐOẠN</button>
 </div>
 <div class="practice-reference" hidden="" id="videoPracticeReference"></div>
 <div class="practice-score" id="videoPracticeScore"></div>
 <p class="copy-feedback" id="copyVideoResultStatus" role="status"></p>
+<div class="practice-actions video-finish-actions">
+<button id="finishVideoPracticeButton" type="button" disabled>✓ HOÀN THÀNH BÀI NGHE</button>
+<span id="finishVideoStatus" class="score-help" role="status" aria-live="polite">0 / 0 đoạn đã chấm</span>
+</div>
 </div>
 </div>
 </div>
@@ -258,40 +256,11 @@ html,body{max-width:100%;overflow-x:clip}
 <option value="en">Tiếng Anh</option>
 </select>
 <span class="language-badge" id="languageBadge">DEUTSCH</span>
-<div class="tts-engine-grid">
-<div class="field">
-<label for="ttsEngineSelect">Nguồn giọng đọc:</label>
-<select class="box" id="ttsEngineSelect">
-<option value="browser">Browser TTS — dùng giọng có sẵn trên thiết bị</option>
-<option value="piper">Piper Local — tải model và chạy trực tiếp trên thiết bị</option>
-</select>
-</div>
-
-<div id="browserTTSControls" class="tts-engine-panel">
 <div class="field"><label for="voiceSelect" id="voiceLabel">Chọn Giọng Đọc Tiếng Đức:</label><select class="box" id="voiceSelect">
 <!-- Các giọng đọc sẽ được thêm vào đây -->
 </select></div>
 <button id="loadVoicesButton" onclick="loadVoices()">TẢI GIỌNG ĐỌC</button>
-<p class="score-help">Browser TTS phụ thuộc Chrome / Windows / macOS / Android. Giọng online có thể khởi động chậm hoặc cắt âm đầu trên một số thiết bị.</p>
-</div>
-
-<div id="piperTTSControls" class="tts-engine-panel" hidden>
-<div class="field">
-<label for="piperVoiceSelect">Giọng Piper:</label>
-<select class="box" id="piperVoiceSelect"></select>
-</div>
-<div class="piper-actions">
-<button id="downloadPiperButton" type="button">TẢI PIPER</button>
-<button id="removePiperButton" type="button">XÓA MODEL</button>
-</div>
-<div class="piper-progress" id="piperProgressWrap" hidden>
-<div class="piper-progress-bar" aria-hidden="true"><span id="piperProgressBar"></span></div>
-<span id="piperProgressText" class="piper-status">0%</span>
-</div>
-<p id="piperStatus" class="piper-status" role="status" aria-live="polite">Chưa kiểm tra model.</p>
-<p class="piper-note">Piper chạy ngay trên thiết bị bằng WebAssembly/ONNX. Model chỉ tải lần đầu rồi được lưu trong bộ nhớ riêng của website trên trình duyệt. Không dùng server/API trả phí. Model medium khoảng 63 MB cho mỗi ngôn ngữ.</p>
-</div>
-</div>
+<p class="score-help">Giọng local thường khởi động nhanh hơn. Giọng online phụ thuộc trình duyệt và kết nối mạng.</p>
 <div class="field"><label for="rateSelect">Chọn Tốc Độ Đọc:</label><div class="rate-container">
 <span id="rateValue">x1.0</span> <!-- Hiển thị giá trị hiện tại của thanh kéo -->
 <input class="box" id="rateSelect" max="2" min="0.5" onchange="updateRateValue()" oninput="updateRateValue()" step="0.1" type="range" value="1"/>
@@ -360,8 +329,16 @@ html,body{max-width:100%;overflow-x:clip}
         let lastInputText = ''; // Lưu lại đoạn văn nhập cuối cùng
 
     let mediaLoadEpoch=0,subtitleLoadEpoch=0,mediaReady=false,segmentEpoch=0,videoRatesUsed=new Set(),videoResultEntry=null;
+    let videoSessionStates=[],videoSessionStartedAt=null,videoSessionFinished=false;
 
-    function invalidateVideoPractice(){practiceUnits=[];currentPracticeIndex=0;videoPracticeChecked=false;videoResultEntry=null;mediaEl('videoPracticeCard').hidden=true;stopPracticeSegment();pauseCurrentMedia();}
+    function invalidateVideoPractice(){
+        practiceUnits=[];currentPracticeIndex=0;videoPracticeChecked=false;videoResultEntry=null;
+        videoSessionStates=[];videoSessionStartedAt=null;videoSessionFinished=false;
+        const card=mediaEl('videoPracticeCard');if(card)card.hidden=true;
+        const finish=mediaEl('finishVideoPracticeButton');if(finish){finish.disabled=true;finish.hidden=false;}
+        const finishStatus=mediaEl('finishVideoStatus');if(finishStatus)finishStatus.textContent='0 / 0 đoạn đã chấm';
+        stopPracticeSegment();pauseCurrentMedia();
+    }
 
 
         // Video/subtitle state
@@ -393,24 +370,6 @@ html,body{max-width:100%;overflow-x:clip}
         let ttsIgnoredToken = 0;
         let lastSpokenSentenceIndex = -1;
 
-
-        // Piper Local TTS (client-side only, no paid API/server)
-        const PIPER_MODULE_URL='https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.5/+esm';
-        const PIPER_VOICE_BY_LANGUAGE={
-            de:{id:'de_DE-thorsten-medium',label:'Deutsch — Thorsten Medium',size:'~63 MB'},
-            en:{id:'en_US-lessac-medium',label:'English (US) — Lessac Medium',size:'~63 MB'}
-        };
-        let ttsEngine='browser';
-        let piperModule=null;
-        let piperModulePromise=null;
-        let piperStoredVoices=new Set();
-        let piperDownloadBusy=false;
-        let activePiperAudio=null;
-        let activePiperObjectUrl=null;
-        let actualTTSEngine='browser';
-        let actualPiperVoiceId='';
-        const piperAudioCache=new Map();
-        const PIPER_AUDIO_CACHE_LIMIT=8;
 
 	// Lắng nghe sự kiện thay đổi của mục chọn tốc độ
 	document.getElementById("rateSelect").addEventListener("change", function() {
@@ -589,7 +548,7 @@ html,body{max-width:100%;overflow-x:clip}
     }
 
     function toggleSubtitles() {
-        if(!subtitlesVisible&&practiceUnits.length&&!videoPracticeChecked)videoAnswerRevealed=true;
+        if(!subtitlesVisible&&practiceUnits.length&&!videoPracticeChecked){videoAnswerRevealed=true;const state=currentVideoSessionState();if(state)state.viewedReference=true;}
         subtitlesVisible = !subtitlesVisible;
         mediaEl('toggleSubtitlesButton').textContent = subtitlesVisible ? 'ẨN SUBTITLE' : 'HIỆN SUBTITLE';
         updateSubtitleAt(getCurrentMediaTime());
@@ -627,7 +586,7 @@ html,body{max-width:100%;overflow-x:clip}
 
     function setCurrentVideoRate(rate){let value=Number(rate)||1;if(currentMediaType==='youtube'&&mediaReady){const rates=youtubePlayer.getAvailablePlaybackRates?.()||[1];value=rates.reduce((a,b)=>Math.abs(b-value)<Math.abs(a-value)?b:a);youtubePlayer.setPlaybackRate(value);if(value!==Number(rate))setMediaStatus('Video hỗ trợ tốc độ gần nhất ×'+value+'.');}else if(currentMediaType==='html5')mediaEl('html5Video').playbackRate=value;return value;}
 
-    async function playMediaSegment(start,end){
+    async function playMediaSegment(start,end,sessionIndex=currentPracticeIndex){
         if(!mediaReady)throw Error('Video chưa sẵn sàng.');stopPracticeSegment();const epoch=segmentEpoch;subtitlesVisible=false;mediaEl('subtitleDetails').open=false;mediaEl('toggleSubtitlesButton').textContent='HIỆN SUBTITLE';updateSubtitleAt(start);
         const from=Math.max(0,start-VIDEO_LEAD_IN),stopAt=end+VIDEO_TAIL;const rate=setCurrentVideoRate(mediaEl('videoRateSelect').value);let observed=false,positionConfirmed=false,requestedAt=performance.now();
         if(currentMediaType==='youtube'){youtubePlayer.seekTo(from,true);youtubePlayer.playVideo();}
@@ -638,48 +597,56 @@ html,body{max-width:100%;overflow-x:clip}
             const playing=currentMediaType==='youtube'?youtubePlayer?.getPlayerState?.()===1:!mediaEl('html5Video').paused;
             const t=getCurrentMediaTime();
             if(Math.abs(t-from)<1)positionConfirmed=true;
-            if(!observed&&playing&&positionConfirmed){observed=true;videoPracticeListenCount++;mediaEl('videoListenCount').textContent=String(videoPracticeListenCount);videoRatesUsed.add(String(rate));}
+            if(!observed&&playing&&positionConfirmed){
+                observed=true;
+                const state=videoSessionStates[sessionIndex];
+                if(state){
+                    state.listenCount++;state.ratesUsed.add(String(rate));
+                    if(sessionIndex===currentPracticeIndex){videoPracticeListenCount=state.listenCount;videoRatesUsed=state.ratesUsed;mediaEl('videoListenCount').textContent=String(state.listenCount);mediaEl('playVideoUnitButton').textContent='↻ REPLAY';}
+                }
+            }
             if(observed&&t>=stopAt){pauseCurrentMedia();stopPracticeSegment();}
             else if(!observed&&performance.now()-requestedAt>12000){pauseCurrentMedia();stopPracticeSegment();setMediaStatus('Chưa phát được. Nhấn Play trên trình phát rồi thử nghe đoạn lại.',true);}
         },80);
     }
 
     function currentPracticeUnit(){return practiceUnits[currentPracticeIndex]||null;}
-
-    function renderVideoPracticeUnit(autoPlay=false) {
-        const unit=currentPracticeUnit();
-        if(!unit)return;
+    function currentVideoSessionState(){return videoSessionStates[currentPracticeIndex]||null;}
+    function checkedVideoUnitCount(){return videoSessionStates.filter(s=>s.checked).length;}
+    function createVideoSessionState(){return {answer:'',checked:false,listenCount:0,ratesUsed:new Set(),viewedReference:false,entry:null};}
+    function saveCurrentVideoDraft(){const state=currentVideoSessionState();if(!state)return;if(!state.checked)state.answer=mediaEl('videoAnswerText').value;state.viewedReference=state.viewedReference||videoAnswerRevealed;}
+    function updateVideoSessionControls(){
+        const state=currentVideoSessionState(),total=practiceUnits.length,checked=checkedVideoUnitCount();
+        mediaEl('backVideoUnitButton').disabled=currentPracticeIndex<=0;
+        mediaEl('nextVideoUnitButton').disabled=!state?.checked||currentPracticeIndex>=total-1;
+        mediaEl('finishVideoPracticeButton').disabled=videoSessionFinished||!total||checked!==total;
+        mediaEl('finishVideoStatus').textContent=videoSessionFinished?`✓ Đã lưu toàn bài vào lịch sử · ${checked}/${total} đoạn`:`${checked} / ${total} đoạn đã chấm · Hoàn thành tất cả đoạn để lưu 1 lượt vào lịch sử.`;
+    }
+    function renderVideoPracticeUnit(autoPlay=false){
+        const unit=currentPracticeUnit(),state=currentVideoSessionState();if(!unit||!state)return;
         stopPracticeSegment();pauseCurrentMedia();
-        videoPracticeListenCount=0;videoPracticeChecked=false;videoResultEntry=null;videoRatesUsed=new Set();videoAnswerRevealed=false;
-        mediaEl('videoListenCount').textContent='0';
-        mediaEl('videoPracticeProgress').textContent=`${currentPracticeIndex+1} / ${practiceUnits.length}`;
+        videoPracticeListenCount=state.listenCount;videoPracticeChecked=state.checked;videoResultEntry=state.entry;videoRatesUsed=state.ratesUsed;videoAnswerRevealed=state.viewedReference;
+        mediaEl('videoListenCount').textContent=String(state.listenCount);
+        mediaEl('videoPracticeProgress').textContent=`Đoạn ${currentPracticeIndex+1} / ${practiceUnits.length} · Đã chấm ${checkedVideoUnitCount()}/${practiceUnits.length}`;
         mediaEl('videoPracticeTime').textContent=`${formatCueTime(unit.start)} → ${formatCueTime(unit.end)}`;
-        mediaEl('videoAnswerText').value='';
-        mediaEl('videoAnswerText').disabled=false;
-        mediaEl('checkVideoAnswerButton').disabled=false;
-        mediaEl('nextVideoUnitButton').hidden=true;
-        mediaEl('copyVideoResultButton').hidden=true;
-        mediaEl('copyVideoResultStatus').textContent='';
-        mediaEl('videoPracticeReference').hidden=true;
-        mediaEl('videoPracticeReference').textContent='';
-        mediaEl('videoPracticeScore').innerHTML='';
-        seekToCue(unit.cueStart);
-        if(autoPlay) playVideoPracticeUnit();
-        setTimeout(()=>mediaEl('videoAnswerText').focus(),0);
+        mediaEl('videoAnswerText').value=state.answer;mediaEl('videoAnswerText').disabled=state.checked;mediaEl('checkVideoAnswerButton').disabled=state.checked;
+        mediaEl('playVideoUnitButton').textContent=state.listenCount?'↻ REPLAY':'▶ PLAY';
+        mediaEl('copyVideoResultButton').hidden=!state.checked;mediaEl('copyVideoResultStatus').textContent='';
+        mediaEl('videoPracticeReference').hidden=!state.checked;mediaEl('videoPracticeReference').textContent=state.checked?`Đáp án: ${unit.text}`:'';
+        mediaEl('videoPracticeScore').innerHTML='';if(state.checked&&state.entry)renderVideoPracticeScore(state.entry);
+        updateVideoSessionControls();seekToCue(unit.cueStart);if(autoPlay)playVideoPracticeUnit();if(!state.checked)setTimeout(()=>mediaEl('videoAnswerText').focus(),0);
     }
-
-    function startVideoPractice() {
+    function startVideoPractice(){
         if(!subtitleCues.length||!currentMediaType||!mediaReady){setMediaStatus('Hãy nạp video và subtitle trước.',true);return;}
-        practiceUnits=buildPracticeUnits(mediaEl('practiceUnitSelect').value);
-        if(!practiceUnits.length){setMediaStatus('Không tạo được unit luyện từ subtitle này.',true);return;}
-        currentPracticeIndex=0;
-        subtitlesVisible=false;mediaEl('toggleSubtitlesButton').textContent='HIỆN SUBTITLE';
-        mediaEl('videoPracticeCard').hidden=false;
-        renderVideoPracticeUnit(false);
-        mediaEl('videoPracticeCard').scrollIntoView({behavior:'smooth',block:'start'});
+        if(videoSessionStates.some(s=>s.answer||s.checked)&&!videoSessionFinished&&!window.confirm('Bắt đầu lại sẽ xóa tiến độ bài video hiện tại. Tiếp tục?'))return;
+        practiceUnits=buildPracticeUnits(mediaEl('practiceUnitSelect').value);if(!practiceUnits.length){setMediaStatus('Không tạo được unit luyện từ subtitle này.',true);return;}
+        currentPracticeIndex=0;videoSessionStates=practiceUnits.map(()=>createVideoSessionState());videoSessionStartedAt=new Date().toISOString();videoSessionFinished=false;
+        subtitlesVisible=false;mediaEl('toggleSubtitlesButton').textContent='HIỆN SUBTITLE';mediaEl('videoPracticeCard').hidden=false;mediaEl('finishVideoPracticeButton').hidden=false;
+        renderVideoPracticeUnit(false);mediaEl('videoPracticeCard').scrollIntoView({behavior:'smooth',block:'start'});
     }
-
-    async function playVideoPracticeUnit(){const unit=currentPracticeUnit();if(!unit)return;try{await playMediaSegment(unit.start,unit.end);}catch(e){setMediaStatus(e.message,true);}}
+    async function playVideoPracticeUnit(){const unit=currentPracticeUnit();if(!unit)return;const sessionIndex=currentPracticeIndex;try{await playMediaSegment(unit.start,unit.end,sessionIndex);}catch(e){setMediaStatus(e.message,true);}}
+    function previousVideoPracticeUnit(){if(currentPracticeIndex<=0)return;saveCurrentVideoDraft();currentPracticeIndex--;renderVideoPracticeUnit(false);}
+    function nextVideoPracticeUnit(){const state=currentVideoSessionState();if(!state?.checked){setMediaStatus('Hãy bấm KẾT QUẢ cho đoạn hiện tại trước khi sang đoạn tiếp theo.',true);return;}if(currentPracticeIndex>=practiceUnits.length-1){updateVideoSessionControls();return;}saveCurrentVideoDraft();currentPracticeIndex++;renderVideoPracticeUnit(false);}
 
     function videoSourceLabel(){return currentMediaType==='youtube'?'YouTube video':'Direct video';}
 
@@ -693,49 +660,30 @@ html,body{max-width:100%;overflow-x:clip}
         mediaEl('videoPracticeScore').innerHTML=`${cards}<div id="videoAnswerComparison">${comparison}</div><p class="score-help">${entry.words} từ gốc · ${c.correct} khớp · ${c.near} gần giống · ${c.wrong} sai · ${c.missing} thiếu · ${c.extra} thừa${isDE?` · ${c.umlaut} khác umlaut`:''}.</p>`;
     }
 
-    function checkVideoAnswer() {
-        const unit=currentPracticeUnit();if(!unit||videoPracticeChecked)return;
-        const answer=mediaEl('videoAnswerText').value.trim();
-        if(!answer){setMediaStatus('Hãy gõ lại đoạn bạn nghe được trước khi chấm.',true);return;}
+    function checkVideoAnswer(){
+        const unit=currentPracticeUnit(),state=currentVideoSessionState();if(!unit||!state||state.checked)return;
+        const answer=mediaEl('videoAnswerText').value.trim();if(!answer){setMediaStatus('Hãy gõ lại đoạn bạn nghe được trước khi chấm.',true);return;}
         try{
-            const grade=gradeListening(unit.text,answer,selectedLanguage);
-            pauseCurrentMedia();stopPracticeSegment();
-            const rate=String(Number(mediaEl('videoRateSelect').value)||1);
-            const entry={
-                id:globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),
-                date:new Date().toISOString(),text:unit.text,answer,language:selectedLanguage,
-                rates:[...videoRatesUsed].sort(),voices:[videoSourceLabel()],listenCount:videoPracticeListenCount,
-                viewedReference:videoAnswerRevealed,source:'video',mediaType:currentMediaType,mediaUrl:loadedVideoUrl,subtitleFile:loadedSubtitleName,
-                timestampStart:unit.start,timestampEnd:unit.end,practiceUnit:mediaEl('practiceUnitSelect').value,
-                practiceIndex:currentPracticeIndex+1,practiceTotal:practiceUnits.length,
-                ...grade,algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'
-            };
-            historyData.push(entry);historyData=historyData.slice(-100);latestScored=entry;saveScoreHistory();updateHistoryTable();
-            showProgress(entry);renderVideoPracticeScore(entry);
-            mediaEl('videoPracticeScore').insertAdjacentHTML('beforeend',`<p class="score-help"><b>Tiến bộ:</b> ${safeText(scoreEl('progressSummary').textContent||'Chưa có dữ liệu so sánh.')}</p>`);
-            mediaEl('videoPracticeReference').textContent=`Đáp án: ${unit.text}`;
-            mediaEl('videoPracticeReference').hidden=false;
-            mediaEl('videoAnswerText').disabled=true;mediaEl('checkVideoAnswerButton').disabled=true;
-            mediaEl('nextVideoUnitButton').hidden=false;mediaEl('copyVideoResultButton').hidden=false;
-            videoPracticeChecked=true;videoResultEntry=entry;
+            const grade=gradeListening(unit.text,answer,selectedLanguage);pauseCurrentMedia();stopPracticeSegment();state.answer=answer;state.viewedReference=state.viewedReference||videoAnswerRevealed;
+            const entry={id:`video-unit-${currentPracticeIndex+1}`,date:new Date().toISOString(),text:unit.text,answer,language:selectedLanguage,rates:[...state.ratesUsed].sort(),voices:[videoSourceLabel()],listenCount:state.listenCount,viewedReference:state.viewedReference,source:'video',mediaType:currentMediaType,mediaUrl:loadedVideoUrl,subtitleFile:loadedSubtitleName,timestampStart:unit.start,timestampEnd:unit.end,practiceUnit:mediaEl('practiceUnitSelect').value,practiceIndex:currentPracticeIndex+1,practiceTotal:practiceUnits.length,...grade,algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'};
+            state.checked=true;state.entry=entry;videoPracticeChecked=true;videoResultEntry=entry;renderVideoPracticeScore(entry);
+            mediaEl('videoPracticeScore').insertAdjacentHTML('beforeend',`<p class="score-help"><b>Đoạn ${currentPracticeIndex+1}/${practiceUnits.length} đã chấm.</b> Chưa ghi lịch sử; chỉ lưu khi bấm HOÀN THÀNH BÀI NGHE.</p>`);
+            mediaEl('videoPracticeReference').textContent=`Đáp án: ${unit.text}`;mediaEl('videoPracticeReference').hidden=false;mediaEl('videoAnswerText').disabled=true;mediaEl('checkVideoAnswerButton').disabled=true;mediaEl('copyVideoResultButton').hidden=false;
+            mediaEl('videoPracticeProgress').textContent=`Đoạn ${currentPracticeIndex+1} / ${practiceUnits.length} · Đã chấm ${checkedVideoUnitCount()}/${practiceUnits.length}`;updateVideoSessionControls();
+            setMediaStatus(currentPracticeIndex<practiceUnits.length-1?'Đã chấm đoạn này. Bạn có thể NEXT hoặc BACK để xem lại.':'Đã chấm đoạn cuối. Nếu mọi đoạn đều hoàn tất, bấm HOÀN THÀNH BÀI NGHE.');
         }catch(e){setMediaStatus(e.message||'Không chấm được lượt này.',true);}
     }
-
-    function nextVideoPracticeUnit() {
-        if(currentPracticeIndex>=practiceUnits.length-1){
-            pauseCurrentMedia();stopPracticeSegment();
-            mediaEl('videoPracticeScore').innerHTML='<b>Đã hoàn thành tất cả unit của subtitle này.</b>';
-            mediaEl('nextVideoUnitButton').hidden=true;
-            return;
-        }
-        currentPracticeIndex++;
-        renderVideoPracticeUnit(false);
-    }
-
-    function skipVideoPracticeUnit() {
-        if(!practiceUnits.length)return;
-        if(currentPracticeIndex>=practiceUnits.length-1){mediaEl('videoPracticeScore').innerHTML='<b>Đã tới unit cuối.</b>';return;}
-        currentPracticeIndex++;renderVideoPracticeUnit(false);
+    function finishVideoPractice(){
+        if(videoSessionFinished)return;saveCurrentVideoDraft();
+        if(!practiceUnits.length||videoSessionStates.length!==practiceUnits.length){setMediaStatus('Chưa có bài video đang luyện.',true);return;}
+        if(videoSessionStates.some(s=>!s.checked||!s.entry)){const missing=videoSessionStates.map((s,i)=>!s.checked?i+1:null).filter(Boolean);setMediaStatus(`Chưa thể hoàn thành. Hãy chấm các đoạn: ${missing.join(', ')}.`,true);return;}
+        pauseCurrentMedia();stopPracticeSegment();
+        const entries=videoSessionStates.map(s=>s.entry),counts={correct:0,umlaut:0,near:0,wrong:0,missing:0,extra:0},operations=[],rates=new Set();let words=0,errors=0,strictErrors=0,listenCount=0;
+        entries.forEach((e,i)=>{words+=e.words;errors+=e.errors;strictErrors+=e.strictErrors;listenCount+=e.listenCount;for(const k of Object.keys(counts))counts[k]+=e.counts[k]||0;e.rates.forEach(r=>rates.add(r));e.operations.forEach(o=>operations.push({...o,unitIndex:i+1}));});
+        const score=n=>Math.max(0,1-n/Math.max(1,words))*100,first=practiceUnits[0],last=practiceUnits.at(-1);
+        const entry={id:globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),date:new Date().toISOString(),startedAt:videoSessionStartedAt,text:practiceUnits.map(u=>u.text).join(' '),answer:videoSessionStates.map(s=>s.answer).join(' '),language:selectedLanguage,rates:[...rates].sort(),voices:[videoSourceLabel()],listenCount,viewedReference:videoSessionStates.some(s=>s.viewedReference),source:'video',videoSession:true,mediaType:currentMediaType,mediaUrl:loadedVideoUrl,subtitleFile:loadedSubtitleName,timestampStart:first?.start??0,timestampEnd:last?.end??0,practiceUnit:mediaEl('practiceUnitSelect').value,practiceTotal:practiceUnits.length,completedUnits:entries.length,checkedUnits:entries.length,unitSummaries:entries.map((e,i)=>({index:i+1,start:e.timestampStart,end:e.timestampEnd,score:e.score,strictScore:e.strictScore,errors:e.errors,strictErrors:e.strictErrors,listenCount:e.listenCount,rates:e.rates,viewedReference:e.viewedReference})),operations,counts,words,errors,strictErrors,score:score(errors),strictScore:score(strictErrors),algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'};
+        historyData.push(entry);historyData=historyData.slice(-100);latestScored=entry;saveScoreHistory();updateHistoryTable();showProgress(entry);videoSessionFinished=true;updateVideoSessionControls();
+        const mainScore=selectedLanguage==='de'?entry.score:entry.strictScore;mediaEl('finishVideoStatus').textContent=`✓ Đã lưu 1 bài video vào lịch sử · ${entries.length} đoạn · ${words} từ · ${formatScore(mainScore)}% · ${listenCount} lượt nghe.`;setMediaStatus('Hoàn thành bài nghe. Lịch sử chỉ ghi 1 dòng cho toàn bộ bài video này.');
     }
 
     mediaEl('loadVideoButton').addEventListener('click', loadVideoFromUrl);
@@ -750,11 +698,11 @@ html,body{max-width:100%;overflow-x:clip}
         if (cue) seekToCue(Number(cue.dataset.cueIndex));
     });
     mediaEl('startVideoPracticeButton').addEventListener('click',startVideoPractice);
+    mediaEl('backVideoUnitButton').addEventListener('click',previousVideoPracticeUnit);
     mediaEl('playVideoUnitButton').addEventListener('click',playVideoPracticeUnit);
-    mediaEl('replayVideoUnitButton').addEventListener('click',playVideoPracticeUnit);
     mediaEl('checkVideoAnswerButton').addEventListener('click',checkVideoAnswer);
     mediaEl('nextVideoUnitButton').addEventListener('click',nextVideoPracticeUnit);
-    mediaEl('skipVideoUnitButton').addEventListener('click',skipVideoPracticeUnit);
+    mediaEl('finishVideoPracticeButton').addEventListener('click',finishVideoPractice);
     mediaEl('videoRateSelect').addEventListener('change',e=>setCurrentVideoRate(e.currentTarget.value));
     mediaEl('copyVideoResultButton').addEventListener('click',()=>{if(!videoResultEntry)return;copyText(buildCurrentCopy(videoResultEntry),'copyVideoResultStatus');});
 
@@ -766,12 +714,14 @@ html,body{max-width:100%;overflow-x:clip}
         if(!e||!['de','en'].includes(e.language)||!['word-align-v1','word-align-en-v1'].includes(e.algorithm))return false;
         if(typeof e.id!=='string'||e.id.length>150||typeof e.text!=='string'||typeof e.answer!=='string'||e.text.length>30000||e.answer.length>30000||!Number.isFinite(Date.parse(e.date)))return false;
         for(const k of ['score','strictScore','words','errors','strictErrors','listenCount'])if(typeof e[k]!=='number'||!Number.isFinite(e[k])||e[k]<0||e[k]>10000)return false;
-        if(e.score>100||e.strictScore>100||!e.counts||!Array.isArray(e.operations)||e.operations.length>2000)return false;
-        for(const k of ['correct','umlaut','near','wrong','missing','extra'])if(!Number.isInteger(e.counts[k])||e.counts[k]<0||e.counts[k]>2000)return false;
+        const opLimit=e.videoSession?12000:2000;
+        if(e.score>100||e.strictScore>100||!e.counts||!Array.isArray(e.operations)||e.operations.length>opLimit)return false;
+        for(const k of ['correct','umlaut','near','wrong','missing','extra'])if(!Number.isInteger(e.counts[k])||e.counts[k]<0||e.counts[k]>opLimit)return false;
         if(!e.operations.every(o=>o&&['correct','umlaut','near','wrong','missing','extra'].includes(o.type)&&typeof o.expected==='string'&&typeof o.actual==='string'&&o.expected.length<30000&&o.actual.length<30000))return false;
         return ['rates','voices'].every(k=>Array.isArray(e[k])&&e[k].length<100&&e[k].every(v=>typeof v==='string'&&v.length<300));
     }
     function coverageText(e){
+        if(e.source==='video'&&e.videoSession)return `Đã hoàn thành ${e.completedUnits||e.practiceTotal||0}/${e.practiceTotal||e.completedUnits||0} đoạn của bài video; tổng ${e.listenCount} lượt phát; ${e.viewedReference?'có mở subtitle/đáp án ở ít nhất một đoạn':'không ghi nhận mở subtitle/đáp án trước khi chấm'}.`;
         if(e.source==='video')return `Đã yêu cầu nghe ${e.listenCount} lượt đoạn ${formatCueTime(e.timestampStart||0)}–${formatCueTime(e.timestampEnd||0)}; ${e.viewedReference?'đã mở đáp án trong lượt':'không ghi nhận mở đáp án trong lượt'}. Không đo mức tập trung hay khẳng định đã nghe đủ.`;
         if(!Number.isInteger(e.totalSentences))return 'Lượt cũ chưa ghi nhận số câu đã phát hết.';
         return `Đã phát hết ${e.completedSentences||0}/${e.totalSentences} câu TTS. ${e.completedSentences<e.totalSentences?'Bài chưa phát hết; không nên diễn giải tất cả từ thiếu là không nghe được.':'Đã phát hết bài, không đồng nghĩa đã hiểu hết.'}`;
@@ -780,7 +730,7 @@ html,body{max-width:100%;overflow-x:clip}
     function bindReviewControls(){
         document.getElementById('stopTTSButton').onclick=stopScoringPlayback;
         document.getElementById('stopVideoButton').onclick=()=>{stopPracticeSegment();pauseCurrentMedia();};
-        document.getElementById('subtitleDetails').addEventListener('toggle',()=>{if(mediaEl('subtitleDetails').open&&practiceUnits.length&&!videoPracticeChecked)videoAnswerRevealed=true;});
+        document.getElementById('subtitleDetails').addEventListener('toggle',()=>{if(mediaEl('subtitleDetails').open&&practiceUnits.length&&!videoPracticeChecked){videoAnswerRevealed=true;const state=currentVideoSessionState();if(state)state.viewedReference=true;}});
         document.getElementById('html5Video').addEventListener('error',()=>{mediaReady=false;stopPracticeSegment();refreshVideoPracticeAvailability();});
         for(const group of document.querySelectorAll('[role=tablist]'))group.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const tabs=[...group.querySelectorAll('[role=tab]')],i=tabs.indexOf(document.activeElement);if(i<0)return;e.preventDefault();const j=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[j].focus();tabs[j].click();});
         document.addEventListener('visibilitychange',()=>{if(document.hidden){stopScoringPlayback();stopPracticeSegment();pauseCurrentMedia();stopYoutubeTicker();}});
@@ -812,250 +762,6 @@ html,body{max-width:100%;overflow-x:clip}
         replayButton.disabled = ttsBusy || !hasPrevious;
     }
 
-
-    function currentPiperVoice(){
-        return PIPER_VOICE_BY_LANGUAGE[selectedLanguage]||PIPER_VOICE_BY_LANGUAGE.de;
-    }
-
-    function setPiperStatus(message,isError=false){
-        const el=document.getElementById('piperStatus');
-        if(!el)return;
-        el.textContent=message;
-        el.className='piper-status'+(isError?' error':'');
-    }
-
-    function setPiperProgress(percent,label=''){
-        const wrap=document.getElementById('piperProgressWrap');
-        const bar=document.getElementById('piperProgressBar');
-        const text=document.getElementById('piperProgressText');
-        const p=Number.isFinite(percent)?Math.max(0,Math.min(100,percent)):0;
-        if(wrap)wrap.hidden=false;
-        if(bar)bar.style.width=p+'%';
-        if(text)text.textContent=label||`${Math.round(p)}%`;
-    }
-
-    function hidePiperProgress(){
-        const wrap=document.getElementById('piperProgressWrap');
-        if(wrap)wrap.hidden=true;
-    }
-
-    async function loadPiperModule(){
-        if(piperModule)return piperModule;
-        if(!piperModulePromise){
-            setPiperStatus('Đang tải thư viện Piper…');
-            piperModulePromise=import(PIPER_MODULE_URL).then(mod=>{
-                piperModule=mod;
-                return mod;
-            }).catch(err=>{
-                piperModulePromise=null;
-                throw err;
-            });
-        }
-        return piperModulePromise;
-    }
-
-    function populatePiperVoiceList(){
-        const select=document.getElementById('piperVoiceSelect');
-        if(!select)return;
-        const meta=currentPiperVoice();
-        select.innerHTML='';
-        const option=document.createElement('option');
-        option.value=meta.id;
-        option.textContent=`${meta.label} (${meta.size})`;
-        select.appendChild(option);
-    }
-
-    async function refreshPiperState(){
-        populatePiperVoiceList();
-        const meta=currentPiperVoice();
-        const downloadBtn=document.getElementById('downloadPiperButton');
-        const removeBtn=document.getElementById('removePiperButton');
-        if(downloadBtn)downloadBtn.textContent=`TẢI PIPER ${selectedLanguage==='de'?'TIẾNG ĐỨC':'TIẾNG ANH'} (${meta.size})`;
-        try{
-            const mod=await loadPiperModule();
-            const stored=await mod.stored();
-            piperStoredVoices=new Set(Array.isArray(stored)?stored:[]);
-            const ready=piperStoredVoices.has(meta.id);
-            if(downloadBtn){downloadBtn.disabled=piperDownloadBusy||ready;downloadBtn.textContent=ready?'PIPER ĐÃ TẢI':`TẢI PIPER ${selectedLanguage==='de'?'TIẾNG ĐỨC':'TIẾNG ANH'} (${meta.size})`;}
-            if(removeBtn)removeBtn.disabled=piperDownloadBusy||!ready;
-            hidePiperProgress();
-            setPiperStatus(ready?`✓ ${meta.label} đã được lưu trên thiết bị. Có thể dùng ngay.`:`Chưa tải ${meta.label}. Nhấn TẢI PIPER một lần; model sẽ được lưu cho những lần sau.`);
-            if(ttsEngine==='piper')setTTSStatus(ready?'Piper sẵn sàng':'Piper chưa tải',ready?'idle':'error');
-            return ready;
-        }catch(err){
-            console.error('Piper state error',err);
-            if(downloadBtn)downloadBtn.disabled=false;
-            if(removeBtn)removeBtn.disabled=true;
-            setPiperStatus('Không tải được thư viện Piper. Hãy mở bằng localhost hoặc HTTPS/GitHub Pages và kiểm tra kết nối.',true);
-            if(ttsEngine==='piper')setTTSStatus('Piper chưa sẵn sàng','error');
-            return false;
-        }
-    }
-
-    async function downloadCurrentPiperVoice(){
-        if(piperDownloadBusy)return;
-        const meta=currentPiperVoice();
-        const downloadBtn=document.getElementById('downloadPiperButton');
-        const removeBtn=document.getElementById('removePiperButton');
-        piperDownloadBusy=true;
-        if(downloadBtn)downloadBtn.disabled=true;
-        if(removeBtn)removeBtn.disabled=true;
-        setPiperStatus(`Đang chuẩn bị tải ${meta.label}…`);
-        setPiperProgress(0,'0%');
-        try{
-            const mod=await loadPiperModule();
-            await mod.download(meta.id,progress=>{
-                const loaded=Number(progress?.loaded)||0;
-                const total=Number(progress?.total)||0;
-                const pct=total>0?loaded*100/total:0;
-                const file=String(progress?.url||'').split('/').pop()||'model';
-                const mb=loaded>0?(loaded/1024/1024).toFixed(1):'0.0';
-                const totalMb=total>0?(total/1024/1024).toFixed(1):'?';
-                setPiperProgress(pct,`${Math.round(pct)}% · ${mb}/${totalMb} MB · ${file}`);
-            });
-            piperStoredVoices.add(meta.id);
-            setPiperProgress(100,'100% · hoàn tất');
-            setPiperStatus(`✓ Đã tải ${meta.label}. Model nằm trên thiết bị này; website không trả phí theo lượt đọc.`);
-            setTTSStatus('Piper sẵn sàng');
-        }catch(err){
-            console.error('Piper download error',err);
-            setPiperStatus(`Tải Piper thất bại: ${err?.message||err}. Kiểm tra dung lượng trống, localhost/HTTPS và kết nối rồi thử lại.`,true);
-            setTTSStatus('Tải Piper thất bại','error');
-        }finally{
-            piperDownloadBusy=false;
-            await refreshPiperState();
-        }
-    }
-
-    async function removeCurrentPiperVoice(){
-        if(piperDownloadBusy)return;
-        const meta=currentPiperVoice();
-        if(!window.confirm(`Xóa model ${meta.label} khỏi thiết bị này?`))return;
-        piperDownloadBusy=true;
-        try{
-            const mod=await loadPiperModule();
-            await mod.remove(meta.id);
-            piperStoredVoices.delete(meta.id);
-            for(const key of [...piperAudioCache.keys()])if(key.startsWith(meta.id+'\n'))piperAudioCache.delete(key);
-            setPiperStatus(`Đã xóa ${meta.label} khỏi thiết bị.`);
-            setTTSStatus('Piper chưa tải','error');
-        }catch(err){
-            setPiperStatus(`Không xóa được model: ${err?.message||err}`,true);
-        }finally{
-            piperDownloadBusy=false;
-            await refreshPiperState();
-        }
-    }
-
-    function stopPiperPlayback(){
-        if(activePiperAudio){
-            try{activePiperAudio.pause();activePiperAudio.currentTime=0;}catch(e){}
-            activePiperAudio.onended=null;
-            activePiperAudio.onerror=null;
-            activePiperAudio=null;
-        }
-        if(activePiperObjectUrl){
-            try{URL.revokeObjectURL(activePiperObjectUrl);}catch(e){}
-            activePiperObjectUrl=null;
-        }
-    }
-
-    function cachePiperBlob(key,blob){
-        if(piperAudioCache.has(key))piperAudioCache.delete(key);
-        piperAudioCache.set(key,blob);
-        while(piperAudioCache.size>PIPER_AUDIO_CACHE_LIMIT){
-            const oldest=piperAudioCache.keys().next().value;
-            piperAudioCache.delete(oldest);
-        }
-    }
-
-    async function speakPiperTTS(text,options={}){
-        const clean=String(text||'').trim();
-        if(ttsBusy||!clean)return false;
-        const meta=currentPiperVoice();
-        const token=++ttsCommandToken;
-        ttsBusy=true;
-        actualTTSEngine='piper';
-        actualPiperVoiceId=meta.id;
-        actualTTSVoice=null;
-        actualTTSRate=currentRate;
-        updateTTSButtons();
-
-        try{
-            const mod=await loadPiperModule();
-            const stored=await mod.stored();
-            piperStoredVoices=new Set(Array.isArray(stored)?stored:[]);
-            if(!piperStoredVoices.has(meta.id))throw new Error(`Chưa tải ${meta.label}. Nhấn TẢI PIPER trước.`);
-            if(token!==ttsCommandToken)return false;
-
-            const key=meta.id+'\n'+clean;
-            let wav=piperAudioCache.get(key);
-            if(!wav){
-                setTTSStatus('Piper đang tạo âm thanh…','speaking');
-                wav=await mod.predict({text:clean,voiceId:meta.id});
-                if(token!==ttsCommandToken)return false;
-                cachePiperBlob(key,wav);
-            }else{
-                setTTSStatus('Đang mở âm thanh Piper…','speaking');
-            }
-
-            stopPiperPlayback();
-            const url=URL.createObjectURL(wav);
-            activePiperObjectUrl=url;
-            const audio=new Audio(url);
-            activePiperAudio=audio;
-            audio.preload='auto';
-            audio.playbackRate=currentRate;
-            try{audio.preservesPitch=true;}catch(e){}
-            let started=false,finished=false;
-
-            const cleanup=()=>{
-                if(activePiperAudio===audio)activePiperAudio=null;
-                if(activePiperObjectUrl===url){try{URL.revokeObjectURL(url);}catch(e){}activePiperObjectUrl=null;}
-            };
-            const finish=(ok,message)=>{
-                if(finished)return;
-                finished=true;
-                cleanup();
-                if(token!==ttsCommandToken)return;
-                ttsBusy=false;
-                if(ok)options.onDone?.();
-                setTTSStatus(message||'Piper sẵn sàng',ok?'idle':'error');
-                updateTTSButtons();
-            };
-            audio.onplaying=()=>{
-                if(started||token!==ttsCommandToken)return;
-                started=true;
-                setTTSStatus(options.wholePassage?'Piper đang đọc toàn bộ…':'Piper đang đọc…','speaking');
-                options.onStart?.();
-            };
-            audio.onended=()=>finish(true,'Piper sẵn sàng');
-            audio.onerror=()=>finish(false,'Piper không phát được audio');
-            setTTSStatus('Piper đã tạo xong · đang phát…','speaking');
-            await audio.play();
-            return true;
-        }catch(err){
-            if(token!==ttsCommandToken)return false;
-            console.error('Piper TTS error',err);
-            stopPiperPlayback();
-            ttsBusy=false;
-            document.getElementById('errorMessage').textContent=`Piper: ${err?.message||err}`;
-            setTTSStatus('Piper gặp lỗi','error');
-            updateTTSButtons();
-            return false;
-        }
-    }
-
-    function refreshTTSEngineUI(){
-        const select=document.getElementById('ttsEngineSelect');
-        ttsEngine=select?.value==='piper'?'piper':'browser';
-        document.getElementById('browserTTSControls').hidden=ttsEngine!=='browser';
-        document.getElementById('piperTTSControls').hidden=ttsEngine!=='piper';
-        try{localStorage.setItem('listening-tts-engine-v1',ttsEngine);}catch(e){}
-        stopScoringPlayback();
-        if(ttsEngine==='piper')refreshPiperState();
-        else {loadVoices();setTTSStatus('Sẵn sàng');}
-    }
 
     function populateVoiceList() {
         if (!('speechSynthesis' in window)) return [];
@@ -1102,7 +808,7 @@ html,body{max-width:100%;overflow-x:clip}
         if (preferred.length) {
             if(ttsBusy)return;
             document.getElementById('errorMessage').innerText = `Đã tải ${preferred.length} giọng ${selectedLanguage === 'de' ? 'tiếng Đức' : 'tiếng Anh'}.`;
-            setTTSStatus(ttsEngine==='piper'?(piperStoredVoices.has(currentPiperVoice().id)?'Piper sẵn sàng':'Piper chưa tải'):'Sẵn sàng',ttsEngine==='piper'&&!piperStoredVoices.has(currentPiperVoice().id)?'error':'idle');
+            setTTSStatus('Sẵn sàng');
             return;
         }
         setTTSStatus('Đang tải danh sách giọng…');
@@ -1218,10 +924,8 @@ html,body{max-width:100%;overflow-x:clip}
         if(part)out.push(part);return out;
     }
     function speakTTS(text,options={}){
-        if(ttsEngine==='piper')return speakPiperTTS(text,options);
         if(ttsBusy||!String(text||'').trim())return false;
         if(!window.speechSynthesis||typeof SpeechSynthesisUtterance==='undefined'){setTTSStatus('Trình duyệt không hỗ trợ TTS','error');return false;}
-        actualTTSEngine='browser';actualPiperVoiceId='';
         const voice=options.voiceOverride||resolveTTSVoice();
         if(!voice){setTTSStatus('Hãy tải / chọn giọng đọc','error');return false;}
         const token=++ttsCommandToken,parts=ttsChunks(text),rate=currentRate;let commandStarted=false,done=false;
@@ -1309,20 +1013,11 @@ html,body{max-width:100%;overflow-x:clip}
         }
 
         // Preflight BEFORE changing the lesson UI.
-        if (ttsEngine==='browser' && !resolveTTSVoice()) {
+        if (!resolveTTSVoice()) {
             loadVoices();
             document.getElementById('errorMessage').innerText = 'Giọng đọc chưa sẵn sàng. Hãy bấm TẢI GIỌNG ĐỌC rồi thử lại.';
             setTTSStatus('Giọng chưa sẵn sàng', 'error');
             return;
-        }
-        if(ttsEngine==='piper'){
-            const meta=currentPiperVoice();
-            if(!piperStoredVoices.has(meta.id)){
-                document.getElementById('errorMessage').innerText=`Chưa tải ${meta.label}. Hãy nhấn TẢI PIPER trước.`;
-                setTTSStatus('Piper chưa tải','error');
-                refreshPiperState();
-                return;
-            }
         }
 
         activeAttemptId = globalThis.crypto?.randomUUID?.() || Date.now() + '-' + Math.random().toString(36).slice(2);
@@ -1420,23 +1115,17 @@ function stopScoringPlayback(){
  ++ttsCommandToken;
  if (ttsMonitorTimer) { clearInterval(ttsMonitorTimer); ttsMonitorTimer = null; }
  ttsIgnoredToken = ttsCommandToken - 1;
- stopPiperPlayback();
  if ('speechSynthesis' in window) {
   try { if(speechSynthesis.speaking||speechSynthesis.pending||speechSynthesis.paused)speechSynthesis.cancel(); } catch(e) {}
  }
  activeTTSUtterance=null;activeTTSWarmup=null;ttsBusy=false;
- if(ttsEngine==='piper'){
-  const ready=piperStoredVoices.has(currentPiperVoice().id);
-  setTTSStatus(ready?'Piper sẵn sàng':'Piper chưa tải',ready?'idle':'error');
- }else{
-  const hasVoice=voices.some(v=>v.lang.toLowerCase().startsWith(getLanguagePrefix()));
-  setTTSStatus(hasVoice?'Sẵn sàng':'Chưa có giọng đọc',hasVoice?'idle':'error');
- }
+ const hasVoice=voices.some(v=>v.lang.toLowerCase().startsWith(getLanguagePrefix()));
+ setTTSStatus(hasVoice?'Sẵn sàng':'Chưa có giọng đọc',hasVoice?'idle':'error');
  updateTTSButtons();
 }
 function notePlayback(){
  attemptRates.add(String(actualTTSRate));
- attemptVoices.add(actualTTSEngine==='piper'?`Piper: ${actualPiperVoiceId}`:(actualTTSVoice?.name||scoreEl('voiceSelect').value||'(mặc định)'));
+ attemptVoices.add(actualTTSVoice?.name||scoreEl('voiceSelect').value||'(mặc định)');
 }
 function oneCharacterApart(a,b){
  if(a===b)return false;
@@ -1564,11 +1253,15 @@ function updateHistoryTable(){
   return;
  }
  scoreEl('historyTableBody').innerHTML=rows.map(e=>{
+  const isVideoSession=e.source==='video'&&e.videoSession;
+  const sourceLabel=isVideoSession?`VIDEO · ${e.practiceTotal||e.completedUnits||'?'} ĐOẠN`:e.source==='video'?`VIDEO ${formatCueTime(e.timestampStart||0)}`:'TTS';
+  const originalDisplay=isVideoSession?`${e.subtitleFile||'Subtitle'} · ${formatCueTime(e.timestampStart||0)} → ${formatCueTime(e.timestampEnd||0)} · ${e.words} từ gốc`:e.text;
+  const answerDisplay=isVideoSession?`Hoàn thành ${e.completedUnits||e.practiceTotal||0}/${e.practiceTotal||e.completedUnits||0} đoạn · ${e.listenCount} lượt nghe`:e.answer;
   const base=[
    cell(labels[0],safeText(new Date(e.date).toLocaleString('vi-VN'))),
-   cell(labels[1],safeText(e.source==='video'?'VIDEO '+formatCueTime(e.timestampStart||0):'TTS')),
-   cell(labels[2],`<div class="history-excerpt">${safeText(e.text)}</div>`),
-   cell(labels[3],`<div class="history-excerpt">${safeText(e.answer)}</div>`)
+   cell(labels[1],safeText(sourceLabel)),
+   cell(labels[2],`<div class="history-excerpt">${safeText(originalDisplay)}</div>`),
+   cell(labels[3],`<div class="history-excerpt">${safeText(answerDisplay)}</div>`)
   ];
 
   const tail=isDE
@@ -1628,7 +1321,7 @@ function buildCurrentCopy(entry){
   '=== KẾT QUẢ LƯỢT HIỆN TẠI ===',
   `Thời gian: ${new Date(entry.date).toLocaleString('vi-VN')}`,
   `Ngôn ngữ: ${isDE?'Tiếng Đức':'Tiếng Anh'}`,
-  `Nguồn: ${entry.source==='video'?`Video (${entry.mediaType||'video'}) · ${formatCueTime(entry.timestampStart||0)} → ${formatCueTime(entry.timestampEnd||0)} · unit ${entry.practiceIndex||'?'} / ${entry.practiceTotal||'?'} · ${entry.subtitleFile||'subtitle'}`:'Text / TTS'}`,
+  `Nguồn: ${entry.source==='video'?(entry.videoSession?`Video (${entry.mediaType||'video'}) · TOÀN BÀI ${entry.completedUnits||entry.practiceTotal||'?'} đoạn · ${formatCueTime(entry.timestampStart||0)} → ${formatCueTime(entry.timestampEnd||0)} · ${entry.subtitleFile||'subtitle'}`:`Video (${entry.mediaType||'video'}) · ${formatCueTime(entry.timestampStart||0)} → ${formatCueTime(entry.timestampEnd||0)} · unit ${entry.practiceIndex||'?'} / ${entry.practiceTotal||'?'} · ${entry.subtitleFile||'subtitle'}`):'Text / TTS'}`,
   `${isDE?'Đoạn gốc':'Original text'}: ${entry.text}`,
   `Tôi đã nghe và nhập: ${entry.answer}`,
   `Số từ gốc: ${entry.words}`,
@@ -1695,7 +1388,7 @@ function updateLanguageUI(){
   ?'<p>Hai điểm dùng cùng công thức <b>max(0, 1 − số lỗi / số từ gốc) × 100</b>. Điểm bỏ umlaut không trừ khi chỉ khác ä/a, ö/o, ü/u; điểm chính tả vẫn tính khác biệt đó.</p><p>Từ gần giống vẫn tính một lỗi. Hoa/thường, dấu câu và khoảng trắng thừa được bỏ qua. ß/ss và ae/ä vẫn được phân biệt.</p><p>So sánh tiến bộ chỉ giữa những lượt cùng bài, giọng và tốc độ.</p>'
   :'<p>English dùng một điểm chính: <b>điểm khớp từ = max(0, 1 − số lỗi / số từ gốc) × 100</b>. Hoa/thường và dấu câu không bị trừ.</p><p>Từ dài lệch một ký tự hoặc đảo hai ký tự liền nhau được gắn nhãn <b>từ gần giống</b> nhưng vẫn tính một lỗi. Trang không tự đoán đó là typo hay nghe nhầm.</p><p>Contractions, homophones và connected speech cần ChatGPT phân tích từ lịch sử thay vì tự cho đúng bằng rule đơn giản. So sánh tiến bộ chỉ giữa những lượt cùng bài, giọng và tốc độ.</p>';
  document.querySelectorAll('[data-language-tab]').forEach(btn=>{const active=btn.dataset.languageTab===selectedLanguage;btn.classList.toggle('active',active);btn.setAttribute('aria-selected',String(active));});
- if(ttsEngine==='piper'){populatePiperVoiceList();refreshPiperState();}else loadVoices();
+ loadVoices();
  updateHistoryTable();
 }
 function switchLanguage(lang){
@@ -1714,7 +1407,7 @@ function exportData(){
  const csv='\uFEFF'+rows.map(row=>row.map(v=>{let s=String(v??'');if(/^\s*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
  const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='listening-progress.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function retryLastLesson(){if(!latestScored)return;const retryEntry=latestScored;switchLanguage(retryEntry.language);if(selectedLanguage!==retryEntry.language)return;switchSourceMode(retryEntry.source==='video'?'video':'tts');if(latestScored.source==='video'){switchSourceMode('video');setMediaStatus('Đây là lượt từ video. Nếu video/subtitle hiện tại đúng nguồn cũ, hãy chọn lại unit tương ứng; trình duyệt không thể tự nạp lại file subtitle cục bộ sau khi trang được mở lại.');return;}stopScoringPlayback();resetForm();scoreEl('inputText').value=latestScored.text;scoreEl('languageSelect').value=latestScored.language;if(latestScored.rates.length===1){scoreEl('rateSelect').value=latestScored.rates[0];updateRateValue();}if(ttsEngine==='browser'&&latestScored.voices.length===1&&voices.some(v=>v.name===latestScored.voices[0]))scoreEl('voiceSelect').value=latestScored.voices[0];scoreEl('scoreDetails').hidden=true;scoreEl('resultMessage').textContent='Bài đã sẵn sàng. Nhấn NGHE ĐOẠN VĂN để bắt đầu lượt mới.';scoreEl('inputText').focus();}
+function retryLastLesson(){if(!latestScored)return;const retryEntry=latestScored;switchLanguage(retryEntry.language);if(selectedLanguage!==retryEntry.language)return;switchSourceMode(retryEntry.source==='video'?'video':'tts');if(latestScored.source==='video'){switchSourceMode('video');setMediaStatus('Đây là lượt từ video. Nếu video/subtitle hiện tại đúng nguồn cũ, hãy chọn lại unit tương ứng; trình duyệt không thể tự nạp lại file subtitle cục bộ sau khi trang được mở lại.');return;}stopScoringPlayback();resetForm();scoreEl('inputText').value=latestScored.text;scoreEl('languageSelect').value=latestScored.language;if(latestScored.rates.length===1){scoreEl('rateSelect').value=latestScored.rates[0];updateRateValue();}if(latestScored.voices.length===1&&voices.some(v=>v.name===latestScored.voices[0]))scoreEl('voiceSelect').value=latestScored.voices[0];scoreEl('scoreDetails').hidden=true;scoreEl('resultMessage').textContent='Bài đã sẵn sàng. Nhấn NGHE ĐOẠN VĂN để bắt đầu lượt mới.';scoreEl('inputText').focus();}
 function clearCurrentLanguageHistory(){
  const language=selectedLanguage;
  const languageLabel=language==='de'?'Tiếng Đức':'Tiếng Anh';
@@ -1736,18 +1429,7 @@ scoreEl('copyHistoryButton').addEventListener('click',copyRecentHistory);
 scoreEl('retryLessonButton').addEventListener('click',retryLastLesson);
 scoreEl('historyTableBody').addEventListener('click',e=>{const button=e.target.closest('[data-score-id]');if(!button)return;const entry=historyData.find(x=>x.id===button.dataset.scoreId);if(entry){latestScored=entry;renderScore(entry);scoreEl('retryLessonButton').hidden=entry.source==='video';switchSourceMode('tts');scoreEl('scoreDetails').scrollIntoView({behavior:'smooth',block:'start'});}});
 try{const saved=JSON.parse(localStorage.getItem(SCORE_HISTORY_KEY)||'[]');if(Array.isArray(saved))historyData=saved.filter(validHistoryEntry).slice(-100);}catch{scoreEl('historyStorageStatus').textContent='Không đọc được lịch sử trên trình duyệt.';}
-try{const savedEngine=localStorage.getItem('listening-tts-engine-v1');if(savedEngine==='piper'||savedEngine==='browser')ttsEngine=savedEngine;}catch(e){}
-scoreEl('ttsEngineSelect').value=ttsEngine;
-scoreEl('ttsEngineSelect').addEventListener('change',refreshTTSEngineUI);
-scoreEl('downloadPiperButton').addEventListener('click',downloadCurrentPiperVoice);
-scoreEl('removePiperButton').addEventListener('click',removeCurrentPiperVoice);
-populatePiperVoiceList();
-updateLanguageUI();
-switchSourceMode('tts');
-bindReviewControls();
-scoreEl('browserTTSControls').hidden=ttsEngine!=='browser';
-scoreEl('piperTTSControls').hidden=ttsEngine!=='piper';
-if(ttsEngine==='piper')refreshPiperState();
+
 
 
         function resetForm() {
