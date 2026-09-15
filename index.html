@@ -172,7 +172,7 @@ html,body{max-width:100%;overflow-x:clip}
 </div>
 <div class="section" hidden="" id="mediaSection">
 <h2>Video Dictation</h2>
-<p class="score-help">Dán video và tải subtitle đúng nguồn (downsub.com). Nghe theo mốc thời gian, gõ lại rồi kiểm tra từng đoạn. Đáp án mặc định được ẩn.</p>
+<p class="score-help">Dán video và tải subtitle đúng nguồn. Nghe theo mốc thời gian, gõ lại rồi kiểm tra từng đoạn. Đáp án mặc định được ẩn.</p>
 <div class="media-row">
 <div class="media-input">
 <label for="videoUrl">Link video:</label>
@@ -618,9 +618,9 @@ html,body{max-width:100%;overflow-x:clip}
     function updateVideoSessionControls(){
         const state=currentVideoSessionState(),total=practiceUnits.length,checked=checkedVideoUnitCount();
         mediaEl('backVideoUnitButton').disabled=currentPracticeIndex<=0;
-        mediaEl('nextVideoUnitButton').disabled=!state?.checked||currentPracticeIndex>=total-1;
-        mediaEl('finishVideoPracticeButton').disabled=videoSessionFinished||!total||checked!==total;
-        mediaEl('finishVideoStatus').textContent=videoSessionFinished?`✓ Đã lưu toàn bài vào lịch sử · ${checked}/${total} đoạn`:`${checked} / ${total} đoạn đã chấm · Hoàn thành tất cả đoạn để lưu 1 lượt vào lịch sử.`;
+        mediaEl('nextVideoUnitButton').disabled=currentPracticeIndex>=total-1;
+        mediaEl('finishVideoPracticeButton').disabled=videoSessionFinished||!total;
+        mediaEl('finishVideoStatus').textContent=videoSessionFinished?`✓ Đã lưu bài vào lịch sử · ${checked}/${total} đoạn đã chấm`:`${checked} / ${total} đoạn đã chấm · Có thể HOÀN THÀNH bất cứ lúc nào; lịch sử sẽ lưu đúng phần đã chấm.`;
     }
     function renderVideoPracticeUnit(autoPlay=false){
         const unit=currentPracticeUnit(),state=currentVideoSessionState();if(!unit||!state)return;
@@ -646,7 +646,20 @@ html,body{max-width:100%;overflow-x:clip}
     }
     async function playVideoPracticeUnit(){const unit=currentPracticeUnit();if(!unit)return;const sessionIndex=currentPracticeIndex;try{await playMediaSegment(unit.start,unit.end,sessionIndex);}catch(e){setMediaStatus(e.message,true);}}
     function previousVideoPracticeUnit(){if(currentPracticeIndex<=0)return;saveCurrentVideoDraft();currentPracticeIndex--;renderVideoPracticeUnit(false);}
-    function nextVideoPracticeUnit(){const state=currentVideoSessionState();if(!state?.checked){setMediaStatus('Hãy bấm KẾT QUẢ cho đoạn hiện tại trước khi sang đoạn tiếp theo.',true);return;}if(currentPracticeIndex>=practiceUnits.length-1){updateVideoSessionControls();return;}saveCurrentVideoDraft();currentPracticeIndex++;renderVideoPracticeUnit(false);}
+    function nextVideoPracticeUnit(){
+        if(currentPracticeIndex>=practiceUnits.length-1){updateVideoSessionControls();return;}
+        const state=currentVideoSessionState();
+        const hasTypedAnswer=Boolean(mediaEl('videoAnswerText').value.trim());
+        if(state&&!state.checked&&hasTypedAnswer){
+            const submitted=submitCurrentVideoAnswer({quiet:true});
+            if(!submitted)return;
+        }else{
+            saveCurrentVideoDraft();
+        }
+        currentPracticeIndex++;
+        renderVideoPracticeUnit(false);
+        setMediaStatus(hasTypedAnswer?'Đã tự chấm đoạn trước và chuyển sang đoạn tiếp theo.':'Đoạn trước chưa có câu trả lời nên được giữ ở trạng thái chưa chấm; bạn có thể BACK để làm sau.');
+    }
 
     function videoSourceLabel(){return currentMediaType==='youtube'?'YouTube video':'Direct video';}
 
@@ -660,30 +673,204 @@ html,body{max-width:100%;overflow-x:clip}
         mediaEl('videoPracticeScore').innerHTML=`${cards}<div id="videoAnswerComparison">${comparison}</div><p class="score-help">${entry.words} từ gốc · ${c.correct} khớp · ${c.near} gần giống · ${c.wrong} sai · ${c.missing} thiếu · ${c.extra} thừa${isDE?` · ${c.umlaut} khác umlaut`:''}.</p>`;
     }
 
-    function checkVideoAnswer(){
-        const unit=currentPracticeUnit(),state=currentVideoSessionState();if(!unit||!state||state.checked)return;
-        const answer=mediaEl('videoAnswerText').value.trim();if(!answer){setMediaStatus('Hãy gõ lại đoạn bạn nghe được trước khi chấm.',true);return;}
+    function submitCurrentVideoAnswer({quiet=false}={}){
+        const unit=currentPracticeUnit(),state=currentVideoSessionState();
+        if(!unit||!state)return false;
+        if(state.checked)return true;
+
+        const answer=mediaEl('videoAnswerText').value.trim();
+        if(!answer){
+            if(!quiet)setMediaStatus('Hãy gõ lại đoạn bạn nghe được trước khi chấm.',true);
+            return false;
+        }
+
         try{
-            const grade=gradeListening(unit.text,answer,selectedLanguage);pauseCurrentMedia();stopPracticeSegment();state.answer=answer;state.viewedReference=state.viewedReference||videoAnswerRevealed;
-            const entry={id:`video-unit-${currentPracticeIndex+1}`,date:new Date().toISOString(),text:unit.text,answer,language:selectedLanguage,rates:[...state.ratesUsed].sort(),voices:[videoSourceLabel()],listenCount:state.listenCount,viewedReference:state.viewedReference,source:'video',mediaType:currentMediaType,mediaUrl:loadedVideoUrl,subtitleFile:loadedSubtitleName,timestampStart:unit.start,timestampEnd:unit.end,practiceUnit:mediaEl('practiceUnitSelect').value,practiceIndex:currentPracticeIndex+1,practiceTotal:practiceUnits.length,...grade,algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'};
-            state.checked=true;state.entry=entry;videoPracticeChecked=true;videoResultEntry=entry;renderVideoPracticeScore(entry);
-            mediaEl('videoPracticeScore').insertAdjacentHTML('beforeend',`<p class="score-help"><b>Đoạn ${currentPracticeIndex+1}/${practiceUnits.length} đã chấm.</b> Chưa ghi lịch sử; chỉ lưu khi bấm HOÀN THÀNH BÀI NGHE.</p>`);
-            mediaEl('videoPracticeReference').textContent=`Đáp án: ${unit.text}`;mediaEl('videoPracticeReference').hidden=false;mediaEl('videoAnswerText').disabled=true;mediaEl('checkVideoAnswerButton').disabled=true;mediaEl('copyVideoResultButton').hidden=false;
-            mediaEl('videoPracticeProgress').textContent=`Đoạn ${currentPracticeIndex+1} / ${practiceUnits.length} · Đã chấm ${checkedVideoUnitCount()}/${practiceUnits.length}`;updateVideoSessionControls();
-            setMediaStatus(currentPracticeIndex<practiceUnits.length-1?'Đã chấm đoạn này. Bạn có thể NEXT hoặc BACK để xem lại.':'Đã chấm đoạn cuối. Nếu mọi đoạn đều hoàn tất, bấm HOÀN THÀNH BÀI NGHE.');
-        }catch(e){setMediaStatus(e.message||'Không chấm được lượt này.',true);}
+            const grade=gradeListening(unit.text,answer,selectedLanguage);
+            pauseCurrentMedia();stopPracticeSegment();
+            state.answer=answer;
+            state.viewedReference=state.viewedReference||videoAnswerRevealed;
+
+            const entry={
+                id:`video-unit-${currentPracticeIndex+1}`,
+                date:new Date().toISOString(),
+                text:unit.text,
+                answer,
+                language:selectedLanguage,
+                rates:[...state.ratesUsed].sort(),
+                voices:[videoSourceLabel()],
+                listenCount:state.listenCount,
+                viewedReference:state.viewedReference,
+                source:'video',
+                mediaType:currentMediaType,
+                mediaUrl:loadedVideoUrl,
+                subtitleFile:loadedSubtitleName,
+                timestampStart:unit.start,
+                timestampEnd:unit.end,
+                practiceUnit:mediaEl('practiceUnitSelect').value,
+                practiceIndex:currentPracticeIndex+1,
+                practiceTotal:practiceUnits.length,
+                ...grade,
+                algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'
+            };
+
+            state.checked=true;
+            state.entry=entry;
+            videoPracticeChecked=true;
+            videoResultEntry=entry;
+
+            renderVideoPracticeScore(entry);
+            mediaEl('videoPracticeScore').insertAdjacentHTML(
+                'beforeend',
+                `<p class="score-help"><b>Đoạn ${currentPracticeIndex+1}/${practiceUnits.length} đã chấm.</b> Chưa ghi lịch sử; chỉ lưu khi bấm HOÀN THÀNH BÀI NGHE.</p>`
+            );
+            mediaEl('videoPracticeReference').textContent=`Đáp án: ${unit.text}`;
+            mediaEl('videoPracticeReference').hidden=false;
+            mediaEl('videoAnswerText').disabled=true;
+            mediaEl('checkVideoAnswerButton').disabled=true;
+            mediaEl('copyVideoResultButton').hidden=false;
+            mediaEl('videoPracticeProgress').textContent=`Đoạn ${currentPracticeIndex+1} / ${practiceUnits.length} · Đã chấm ${checkedVideoUnitCount()}/${practiceUnits.length}`;
+            updateVideoSessionControls();
+
+            if(!quiet){
+                setMediaStatus(
+                    currentPracticeIndex<practiceUnits.length-1
+                        ?'Đã chấm đoạn này. NEXT sẽ sang đoạn tiếp theo; BACK để xem lại.'
+                        :'Đã chấm đoạn cuối. Bạn có thể BACK hoặc HOÀN THÀNH BÀI NGHE.'
+                );
+            }
+            return true;
+        }catch(e){
+            setMediaStatus(e.message||'Không chấm được lượt này.',true);
+            return false;
+        }
     }
+
+    function checkVideoAnswer(){
+        submitCurrentVideoAnswer({quiet:false});
+    }
+
     function finishVideoPractice(){
-        if(videoSessionFinished)return;saveCurrentVideoDraft();
-        if(!practiceUnits.length||videoSessionStates.length!==practiceUnits.length){setMediaStatus('Chưa có bài video đang luyện.',true);return;}
-        if(videoSessionStates.some(s=>!s.checked||!s.entry)){const missing=videoSessionStates.map((s,i)=>!s.checked?i+1:null).filter(Boolean);setMediaStatus(`Chưa thể hoàn thành. Hãy chấm các đoạn: ${missing.join(', ')}.`,true);return;}
+        if(videoSessionFinished)return;
+        if(!practiceUnits.length||videoSessionStates.length!==practiceUnits.length){
+            setMediaStatus('Chưa có bài video đang luyện.',true);
+            return;
+        }
+
+        // If the current unit contains an answer but has not been checked yet,
+        // treat Finish the same way as NEXT: submit it automatically first.
+        const currentState=currentVideoSessionState();
+        const currentHasAnswer=Boolean(mediaEl('videoAnswerText').value.trim());
+        if(currentState&&!currentState.checked&&currentHasAnswer){
+            const submitted=submitCurrentVideoAnswer({quiet:true});
+            if(!submitted)return;
+        }else{
+            saveCurrentVideoDraft();
+        }
+
         pauseCurrentMedia();stopPracticeSegment();
-        const entries=videoSessionStates.map(s=>s.entry),counts={correct:0,umlaut:0,near:0,wrong:0,missing:0,extra:0},operations=[],rates=new Set();let words=0,errors=0,strictErrors=0,listenCount=0;
-        entries.forEach((e,i)=>{words+=e.words;errors+=e.errors;strictErrors+=e.strictErrors;listenCount+=e.listenCount;for(const k of Object.keys(counts))counts[k]+=e.counts[k]||0;e.rates.forEach(r=>rates.add(r));e.operations.forEach(o=>operations.push({...o,unitIndex:i+1}));});
-        const score=n=>Math.max(0,1-n/Math.max(1,words))*100,first=practiceUnits[0],last=practiceUnits.at(-1);
-        const entry={id:globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),date:new Date().toISOString(),startedAt:videoSessionStartedAt,text:practiceUnits.map(u=>u.text).join(' '),answer:videoSessionStates.map(s=>s.answer).join(' '),language:selectedLanguage,rates:[...rates].sort(),voices:[videoSourceLabel()],listenCount,viewedReference:videoSessionStates.some(s=>s.viewedReference),source:'video',videoSession:true,mediaType:currentMediaType,mediaUrl:loadedVideoUrl,subtitleFile:loadedSubtitleName,timestampStart:first?.start??0,timestampEnd:last?.end??0,practiceUnit:mediaEl('practiceUnitSelect').value,practiceTotal:practiceUnits.length,completedUnits:entries.length,checkedUnits:entries.length,unitSummaries:entries.map((e,i)=>({index:i+1,start:e.timestampStart,end:e.timestampEnd,score:e.score,strictScore:e.strictScore,errors:e.errors,strictErrors:e.strictErrors,listenCount:e.listenCount,rates:e.rates,viewedReference:e.viewedReference})),operations,counts,words,errors,strictErrors,score:score(errors),strictScore:score(strictErrors),algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'};
-        historyData.push(entry);historyData=historyData.slice(-100);latestScored=entry;saveScoreHistory();updateHistoryTable();showProgress(entry);videoSessionFinished=true;updateVideoSessionControls();
-        const mainScore=selectedLanguage==='de'?entry.score:entry.strictScore;mediaEl('finishVideoStatus').textContent=`✓ Đã lưu 1 bài video vào lịch sử · ${entries.length} đoạn · ${words} từ · ${formatScore(mainScore)}% · ${listenCount} lượt nghe.`;setMediaStatus('Hoàn thành bài nghe. Lịch sử chỉ ghi 1 dòng cho toàn bộ bài video này.');
+
+        const checkedStates=videoSessionStates
+            .map((state,index)=>({state,index}))
+            .filter(x=>x.state.checked&&x.state.entry);
+
+        // The button is always clickable. If nothing has been graded yet,
+        // finish the session without creating a meaningless 0% history row.
+        if(!checkedStates.length){
+            videoSessionFinished=true;
+            updateVideoSessionControls();
+            mediaEl('finishVideoStatus').textContent=`✓ Đã kết thúc bài · 0/${practiceUnits.length} đoạn đã chấm · không có kết quả để lưu.`;
+            setMediaStatus('Đã kết thúc bài nghe. Chưa có đoạn nào được chấm nên không ghi vào lịch sử.');
+            return;
+        }
+
+        const entries=checkedStates.map(x=>x.state.entry);
+        const counts={correct:0,umlaut:0,near:0,wrong:0,missing:0,extra:0};
+        const operations=[],rates=new Set();
+        let words=0,errors=0,strictErrors=0,listenCount=0;
+
+        checkedStates.forEach(({state,index})=>{
+            const e=state.entry;
+            words+=e.words;
+            errors+=e.errors;
+            strictErrors+=e.strictErrors;
+            listenCount+=e.listenCount;
+            for(const k of Object.keys(counts))counts[k]+=e.counts[k]||0;
+            e.rates.forEach(r=>rates.add(r));
+            e.operations.forEach(o=>operations.push({...o,unitIndex:index+1}));
+        });
+
+        const score=n=>Math.max(0,1-n/Math.max(1,words))*100;
+        const firstChecked=checkedStates[0];
+        const lastChecked=checkedStates.at(-1);
+        const firstUnit=practiceUnits[firstChecked.index];
+        const lastUnit=practiceUnits[lastChecked.index];
+        const checkedCount=checkedStates.length;
+        const total=practiceUnits.length;
+        const partial=checkedCount<total;
+
+        const entry={
+            id:globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2),
+            date:new Date().toISOString(),
+            startedAt:videoSessionStartedAt,
+            text:checkedStates.map(({index})=>practiceUnits[index].text).join(' '),
+            answer:checkedStates.map(({state})=>state.answer).join(' '),
+            language:selectedLanguage,
+            rates:[...rates].sort(),
+            voices:[videoSourceLabel()],
+            listenCount,
+            viewedReference:checkedStates.some(({state})=>state.viewedReference),
+            source:'video',
+            videoSession:true,
+            partialVideoSession:partial,
+            mediaType:currentMediaType,
+            mediaUrl:loadedVideoUrl,
+            subtitleFile:loadedSubtitleName,
+            timestampStart:firstUnit?.start??0,
+            timestampEnd:lastUnit?.end??0,
+            practiceUnit:mediaEl('practiceUnitSelect').value,
+            practiceTotal:total,
+            completedUnits:checkedCount,
+            checkedUnits:checkedCount,
+            unitSummaries:checkedStates.map(({state,index})=>({
+                index:index+1,
+                start:state.entry.timestampStart,
+                end:state.entry.timestampEnd,
+                score:state.entry.score,
+                strictScore:state.entry.strictScore,
+                errors:state.entry.errors,
+                strictErrors:state.entry.strictErrors,
+                listenCount:state.entry.listenCount,
+                rates:state.entry.rates,
+                viewedReference:state.entry.viewedReference
+            })),
+            operations,
+            counts,
+            words,
+            errors,
+            strictErrors,
+            score:score(errors),
+            strictScore:score(strictErrors),
+            algorithm:selectedLanguage==='de'?'word-align-v1':'word-align-en-v1'
+        };
+
+        historyData.push(entry);
+        historyData=historyData.slice(-100);
+        latestScored=entry;
+        saveScoreHistory();
+        updateHistoryTable();
+        showProgress(entry);
+
+        videoSessionFinished=true;
+        updateVideoSessionControls();
+
+        const mainScore=selectedLanguage==='de'?entry.score:entry.strictScore;
+        mediaEl('finishVideoStatus').textContent=
+            `✓ Đã lưu ${checkedCount}/${total} đoạn vào lịch sử · ${words} từ · ${formatScore(mainScore)}% · ${listenCount} lượt nghe.`;
+        setMediaStatus(
+            partial
+                ?`Đã hoàn thành sớm. Lịch sử lưu 1 dòng cho ${checkedCount}/${total} đoạn đã chấm; các đoạn chưa chấm không bị tính là sai.`
+                :'Hoàn thành toàn bộ bài nghe. Lịch sử chỉ ghi 1 dòng cho cả bài video.'
+        );
     }
 
     mediaEl('loadVideoButton').addEventListener('click', loadVideoFromUrl);
@@ -721,7 +908,7 @@ html,body{max-width:100%;overflow-x:clip}
         return ['rates','voices'].every(k=>Array.isArray(e[k])&&e[k].length<100&&e[k].every(v=>typeof v==='string'&&v.length<300));
     }
     function coverageText(e){
-        if(e.source==='video'&&e.videoSession)return `Đã hoàn thành ${e.completedUnits||e.practiceTotal||0}/${e.practiceTotal||e.completedUnits||0} đoạn của bài video; tổng ${e.listenCount} lượt phát; ${e.viewedReference?'có mở subtitle/đáp án ở ít nhất một đoạn':'không ghi nhận mở subtitle/đáp án trước khi chấm'}.`;
+        if(e.source==='video'&&e.videoSession)return `Đã chấm ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||0} đoạn của bài video; tổng ${e.listenCount} lượt phát. Điểm chỉ tính trên các đoạn đã chấm; đoạn chưa chấm không bị tính là sai. ${e.viewedReference?'Có mở subtitle/đáp án ở ít nhất một đoạn.':'Không ghi nhận mở subtitle/đáp án trước khi chấm.'}`;
         if(e.source==='video')return `Đã yêu cầu nghe ${e.listenCount} lượt đoạn ${formatCueTime(e.timestampStart||0)}–${formatCueTime(e.timestampEnd||0)}; ${e.viewedReference?'đã mở đáp án trong lượt':'không ghi nhận mở đáp án trong lượt'}. Không đo mức tập trung hay khẳng định đã nghe đủ.`;
         if(!Number.isInteger(e.totalSentences))return 'Lượt cũ chưa ghi nhận số câu đã phát hết.';
         return `Đã phát hết ${e.completedSentences||0}/${e.totalSentences} câu TTS. ${e.completedSentences<e.totalSentences?'Bài chưa phát hết; không nên diễn giải tất cả từ thiếu là không nghe được.':'Đã phát hết bài, không đồng nghĩa đã hiểu hết.'}`;
@@ -1254,9 +1441,9 @@ function updateHistoryTable(){
  }
  scoreEl('historyTableBody').innerHTML=rows.map(e=>{
   const isVideoSession=e.source==='video'&&e.videoSession;
-  const sourceLabel=isVideoSession?`VIDEO · ${e.practiceTotal||e.completedUnits||'?'} ĐOẠN`:e.source==='video'?`VIDEO ${formatCueTime(e.timestampStart||0)}`:'TTS';
+  const sourceLabel=isVideoSession?`VIDEO · ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||'?'} ĐOẠN`:e.source==='video'?`VIDEO ${formatCueTime(e.timestampStart||0)}`:'TTS';
   const originalDisplay=isVideoSession?`${e.subtitleFile||'Subtitle'} · ${formatCueTime(e.timestampStart||0)} → ${formatCueTime(e.timestampEnd||0)} · ${e.words} từ gốc`:e.text;
-  const answerDisplay=isVideoSession?`Hoàn thành ${e.completedUnits||e.practiceTotal||0}/${e.practiceTotal||e.completedUnits||0} đoạn · ${e.listenCount} lượt nghe`:e.answer;
+  const answerDisplay=isVideoSession?`${e.partialVideoSession?'Hoàn thành sớm':'Hoàn thành'} ${e.completedUnits||0}/${e.practiceTotal||e.completedUnits||0} đoạn · ${e.listenCount} lượt nghe`:e.answer;
   const base=[
    cell(labels[0],safeText(new Date(e.date).toLocaleString('vi-VN'))),
    cell(labels[1],safeText(sourceLabel)),
